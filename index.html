@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Склад за плодове и зеленчуци</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="container">
+        <header class="page-header">
+            <div>
+                <p class="subtitle">Изчисляване на заявката</p>
+                <h1>Склад</h1>
+            </div>
+
+            <div class="date-block">
+                <label for="workDate">Дата</label>
+                <input type="date" id="workDate">
+            </div>
+        </header>
+
+        <section class="info-box">
+            <strong>Как се попълва:</strong>
+
+            <span>
+                В колоната „Необходимо“ можеш да напишеш:
+                20+30+12+11
+            </span>
+        </section>
+
+        <section class="card">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="product-column">
+                                Продукт
+                            </th>
+
+                            <th>
+                                Остатък
+                            </th>
+
+                            <th>
+                                Необходимо
+                            </th>
+
+                            <th>
+                                За поръчка
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="productsTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bottom-panel">
+            <div class="total">
+                Общо за поръчка:
+
+                <strong id="totalOrder">
+                    0 кг
+                </strong>
+            </div>
+
+            <button id="calculateButton">
+                Изчисли
+            </button>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

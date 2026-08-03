@@ -1,0 +1,319 @@
+* {
+    box-sizing: border-box;
+}
+
+html {
+    background: #f3f4f3;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    background: #f3f4f3;
+    color: #171717;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+.container {
+    width: min(950px, 100%);
+    margin: 0 auto;
+    padding: 20px 14px 130px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+
+    margin-bottom: 16px;
+}
+
+.subtitle {
+    margin: 0 0 4px;
+    color: #777;
+    font-size: 14px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.date-block {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.date-block label {
+    color: #777;
+    font-size: 13px;
+}
+
+.date-block input {
+    max-width: 155px;
+    padding: 9px;
+
+    border: 1px solid #dedede;
+    border-radius: 10px;
+
+    background: white;
+}
+
+.info-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 8px;
+
+    margin-bottom: 14px;
+    padding: 12px 14px;
+
+    border-radius: 12px;
+    background: #e8eee9;
+
+    color: #3f4c42;
+    font-size: 13px;
+}
+
+.card {
+    overflow: hidden;
+
+    border-radius: 16px;
+    background: white;
+
+    box-shadow:
+        0 8px 25px
+        rgba(0, 0, 0, 0.04);
+}
+
+.table-wrapper {
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+th {
+    padding: 13px 5px;
+
+    background: #e9ebe9;
+    color: #454545;
+
+    font-size: 13px;
+    text-align: center;
+}
+
+th:first-child {
+    padding-left: 12px;
+    text-align: left;
+}
+
+td {
+    height: 55px;
+    padding: 6px 5px;
+
+    border-bottom: 1px solid #eeeeee;
+
+    text-align: center;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.product-column,
+.product-name {
+    width: 39%;
+}
+
+th:not(.product-column),
+td:not(.product-name) {
+    width: 20.33%;
+}
+
+.product-name {
+    padding-left: 12px;
+
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+
+    overflow-wrap: anywhere;
+}
+
+.number-input {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 3px;
+
+    border: 1px solid #dedede;
+    border-radius: 9px;
+
+    background: #fafafa;
+
+    font-size: 16px;
+    text-align: center;
+
+    outline: none;
+}
+
+.number-input:focus {
+    border-color: #777;
+    background: white;
+}
+
+.number-input.input-error {
+    border-color: #c62828;
+    background: #fff1f1;
+}
+
+.order-value {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.order-value.positive {
+    color: #1f6e3d;
+}
+
+.order-value.error {
+    color: #c62828;
+    font-size: 12px;
+}
+
+.bottom-panel {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+
+    width: min(950px, 100%);
+    margin: 0 auto;
+
+    padding:
+        13px
+        14px
+        calc(13px + env(safe-area-inset-bottom));
+
+    border-top: 1px solid #dddddd;
+
+    background: rgba(248, 248, 248, 0.95);
+    backdrop-filter: blur(15px);
+}
+
+.total {
+    color: #666;
+    font-size: 14px;
+}
+
+.total strong {
+    display: block;
+
+    color: #171717;
+    font-size: 21px;
+}
+
+button {
+    min-width: 135px;
+    padding: 13px 18px;
+
+    border: none;
+    border-radius: 12px;
+
+    background: #222;
+    color: white;
+
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 500px) {
+    .container {
+        padding-top: 14px;
+        padding-right: 7px;
+        padding-left: 7px;
+    }
+
+    .page-header {
+        padding: 0 7px;
+    }
+
+    h1 {
+        font-size: 27px;
+    }
+
+    .info-box {
+        margin-right: 7px;
+        margin-left: 7px;
+    }
+
+    .product-column,
+    .product-name {
+        width: 37%;
+    }
+
+    th:not(.product-column),
+    td:not(.product-name) {
+        width: 21%;
+    }
+
+    th {
+        padding: 11px 2px;
+        font-size: 11px;
+    }
+
+    td {
+        padding: 5px 2px;
+    }
+
+    .product-name {
+        padding-left: 8px;
+        font-size: 13px;
+    }
+
+    .number-input {
+        padding: 9px 1px;
+        font-size: 15px;
+    }
+
+    .order-value {
+        font-size: 14px;
+    }
+
+    button {
+        min-width: 120px;
+    }
+}
