@@ -56,6 +56,8 @@ const products = [
 
 const STORAGE_KEY = "vegAppCurrentData";
 
+/* Основни елементи */
+
 const productsTable =
     document.querySelector("#productsTable");
 
@@ -71,10 +73,16 @@ const totalOrderElement =
 const workDateInput =
     document.querySelector("#workDate");
 
-/* Прозорец за въвеждане */
+/* Елементи на долния прозорец */
 
 const expressionModal =
     document.querySelector("#expressionModal");
+
+const modalContent =
+    expressionModal.querySelector(".modal-content");
+
+const modalBackdrop =
+    expressionModal.querySelector(".modal-backdrop");
 
 const modalProductName =
     document.querySelector("#modalProductName");
@@ -91,17 +99,15 @@ const expressionError =
 const closeModalButton =
     document.querySelector("#closeModalButton");
 
-const cancelExpressionButton =
-    document.querySelector("#cancelExpressionButton");
-
 const saveExpressionButton =
     document.querySelector("#saveExpressionButton");
 
-const modalBackdrop =
-    expressionModal.querySelector(".modal-backdrop");
+const sheetHandle =
+    document.querySelector("#sheetHandle");
 
 let activeProductIndex = null;
-let originalExpression = "";
+
+/* Дата */
 
 function getCurrentDate() {
     const now = new Date();
@@ -118,6 +124,8 @@ function getCurrentDate() {
 
     return `${year}-${month}-${day}`;
 }
+
+/* Създаване на таблицата */
 
 function createProductsTable() {
     productsTable.innerHTML = "";
@@ -139,6 +147,7 @@ function createProductsTable() {
                     autocomplete="off"
                     placeholder="0"
                     data-index="${index}"
+                    aria-label="Остатък за ${product}"
                 >
             </td>
 
@@ -168,8 +177,10 @@ function createProductsTable() {
     });
 }
 
+/* Изчисления */
+
 function calculateExpression(value) {
-    const expression = value
+    const expression = String(value)
         .replaceAll(",", ".")
         .replaceAll(" ", "")
         .replaceAll("\n", "");
@@ -185,7 +196,8 @@ function calculateExpression(value) {
         return null;
     }
 
-    const numbers = expression.split("+");
+    const numbers =
+        expression.split("+");
 
     const result = numbers.reduce(
         (sum, number) => {
@@ -200,7 +212,7 @@ function calculateExpression(value) {
 }
 
 function calculateStock(value) {
-    const normalizedValue = value
+    const normalizedValue = String(value)
         .replace(",", ".")
         .trim();
 
@@ -208,7 +220,8 @@ function calculateStock(value) {
         return 0;
     }
 
-    const number = Number(normalizedValue);
+    const number =
+        Number(normalizedValue);
 
     if (
         !Number.isFinite(number) ||
@@ -220,122 +233,11 @@ function calculateStock(value) {
     return number;
 }
 
-function openExpressionModal(index) {
-    activeProductIndex = index;
+function formatNumber(number) {
+    const roundedNumber =
+        Math.round(number * 100) / 100;
 
-    const requiredInput =
-        document.querySelector(
-            `.required-input[data-index="${index}"]`
-        );
-
-    originalExpression =
-        requiredInput.dataset.expression || "";
-
-    modalProductName.textContent =
-        products[index];
-
-    expressionInput.value =
-        originalExpression;
-
-    expressionError.textContent = "";
-
-    updateExpressionPreview();
-
-    expressionModal.classList.add("open");
-
-    expressionModal.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-
-    document.body.classList.add(
-        "modal-open"
-    );
-
-    window.setTimeout(() => {
-        expressionInput.focus();
-
-        expressionInput.setSelectionRange(
-            expressionInput.value.length,
-            expressionInput.value.length
-        );
-    }, 50);
-}
-
-function closeExpressionModal() {
-    expressionModal.classList.remove("open");
-
-    expressionModal.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-    document.body.classList.remove(
-        "modal-open"
-    );
-
-    activeProductIndex = null;
-    originalExpression = "";
-    expressionError.textContent = "";
-}
-
-function updateExpressionPreview() {
-    const result =
-        calculateExpression(
-            expressionInput.value
-        );
-
-    if (result === null) {
-        expressionTotal.textContent = "—";
-        expressionError.textContent =
-            "Използвай формат: 20+30+12";
-
-        return;
-    }
-
-    expressionError.textContent = "";
-
-    expressionTotal.textContent =
-        `${formatNumber(result)} кг`;
-}
-
-function saveExpression() {
-    if (activeProductIndex === null) {
-        return;
-    }
-
-    const expression =
-        expressionInput.value
-            .replaceAll(" ", "")
-            .replaceAll("\n", "");
-
-    const result =
-        calculateExpression(expression);
-
-    if (result === null) {
-        expressionError.textContent =
-            "Неправилен формат. Използвай: 20+30+12";
-
-        expressionInput.focus();
-        return;
-    }
-
-    const requiredInput =
-        document.querySelector(
-            `.required-input[data-index="${activeProductIndex}"]`
-        );
-
-    requiredInput.dataset.expression =
-        expression;
-
-    requiredInput.value =
-        expression === ""
-            ? ""
-            : formatNumber(result);
-
-    saveCurrentData();
-    calculateOrders(false);
-    closeExpressionModal();
+    return roundedNumber.toString();
 }
 
 function calculateOrders(showAlert = true) {
@@ -435,6 +337,145 @@ function calculateOrders(showAlert = true) {
     }
 }
 
+/* Автоматична височина */
+
+function resizeExpressionInput() {
+    expressionInput.style.height = "auto";
+
+    const newHeight = Math.min(
+        expressionInput.scrollHeight,
+        112
+    );
+
+    expressionInput.style.height =
+        `${Math.max(newHeight, 52)}px`;
+}
+
+/* Долен прозорец */
+
+function openExpressionModal(index) {
+    activeProductIndex = index;
+
+    const requiredInput =
+        document.querySelector(
+            `.required-input[data-index="${index}"]`
+        );
+
+    modalProductName.textContent =
+        products[index];
+
+    expressionInput.value =
+        requiredInput.dataset.expression || "";
+
+    expressionError.textContent = "";
+
+    updateExpressionPreview();
+    resizeExpressionInput();
+
+    expressionModal.classList.add("open");
+
+    expressionModal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.classList.add(
+        "modal-open"
+    );
+
+    window.setTimeout(() => {
+        expressionInput.focus();
+
+        const textLength =
+            expressionInput.value.length;
+
+        expressionInput.setSelectionRange(
+            textLength,
+            textLength
+        );
+    }, 100);
+}
+
+function closeExpressionModal() {
+    expressionModal.classList.remove("open");
+
+    expressionModal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    document.body.classList.remove(
+        "modal-open"
+    );
+
+    modalContent.style.transform = "";
+    modalContent.style.transition = "";
+
+    activeProductIndex = null;
+    expressionError.textContent = "";
+}
+
+function updateExpressionPreview() {
+    const result =
+        calculateExpression(
+            expressionInput.value
+        );
+
+    if (result === null) {
+        expressionTotal.textContent = "—";
+
+        expressionError.textContent =
+            "Използвай формат: 20+30+12";
+
+        return;
+    }
+
+    expressionError.textContent = "";
+
+    expressionTotal.textContent =
+        `${formatNumber(result)} кг`;
+}
+
+function saveExpression() {
+    if (activeProductIndex === null) {
+        return;
+    }
+
+    const expression =
+        expressionInput.value
+            .replaceAll(" ", "")
+            .replaceAll("\n", "");
+
+    const result =
+        calculateExpression(expression);
+
+    if (result === null) {
+        expressionError.textContent =
+            "Неправилен формат. Използвай: 20+30+12";
+
+        expressionInput.focus();
+        return;
+    }
+
+    const requiredInput =
+        document.querySelector(
+            `.required-input[data-index="${activeProductIndex}"]`
+        );
+
+    requiredInput.dataset.expression =
+        expression;
+
+    requiredInput.value =
+        expression === ""
+            ? ""
+            : formatNumber(result);
+
+    calculateOrders(false);
+    closeExpressionModal();
+}
+
+/* Запазване в браузъра */
+
 function collectCurrentData() {
     const items = products.map(
         (product, index) => {
@@ -532,10 +573,9 @@ function loadCurrentData() {
                 savedItem.stock ?? "";
 
             /*
-                Поддръжка и на стария формат,
-                ако преди е било записано required.
+                Поддържа и данните,
+                записани от старата версия.
             */
-
             const savedExpression =
                 savedItem.expression ??
                 savedItem.required ??
@@ -566,6 +606,8 @@ function loadCurrentData() {
     }
 }
 
+/* Изчистване */
+
 function clearCurrentData() {
     const confirmed = confirm(
         "Сигурен ли си, че искаш да изчистиш всички въведени данни?"
@@ -579,6 +621,7 @@ function clearCurrentData() {
         .querySelectorAll(".stock-input")
         .forEach((input) => {
             input.value = "";
+
             input.classList.remove(
                 "input-error"
             );
@@ -613,14 +656,7 @@ function clearCurrentData() {
     );
 }
 
-function formatNumber(number) {
-    const roundedNumber =
-        Math.round(number * 100) / 100;
-
-    return roundedNumber.toString();
-}
-
-/* Събития на таблицата */
+/* Таблица */
 
 productsTable.addEventListener(
     "click",
@@ -671,21 +707,19 @@ clearButton.addEventListener(
     clearCurrentData
 );
 
-/* Събития на големия прозорец */
+/* Събития на прозореца */
 
 expressionInput.addEventListener(
     "input",
-    updateExpressionPreview
+    () => {
+        resizeExpressionInput();
+        updateExpressionPreview();
+    }
 );
 
 saveExpressionButton.addEventListener(
     "click",
     saveExpression
-);
-
-cancelExpressionButton.addEventListener(
-    "click",
-    closeExpressionModal
 );
 
 closeModalButton.addEventListener(
@@ -711,6 +745,92 @@ document.addEventListener(
         }
     }
 );
+
+/* Свайп надолу */
+
+let sheetStartY = 0;
+let sheetCurrentY = 0;
+let isDraggingSheet = false;
+
+function startSheetDrag(event) {
+    const touch =
+        event.touches[0];
+
+    sheetStartY =
+        touch.clientY;
+
+    sheetCurrentY =
+        touch.clientY;
+
+    isDraggingSheet = true;
+
+    modalContent.style.transition =
+        "none";
+}
+
+function moveSheetDrag(event) {
+    if (!isDraggingSheet) {
+        return;
+    }
+
+    const touch =
+        event.touches[0];
+
+    sheetCurrentY =
+        touch.clientY;
+
+    const distance = Math.max(
+        sheetCurrentY - sheetStartY,
+        0
+    );
+
+    modalContent.style.transform =
+        `translateY(${distance}px)`;
+}
+
+function finishSheetDrag() {
+    if (!isDraggingSheet) {
+        return;
+    }
+
+    isDraggingSheet = false;
+
+    const distance =
+        sheetCurrentY - sheetStartY;
+
+    modalContent.style.transition = "";
+
+    if (distance > 90) {
+        closeExpressionModal();
+        return;
+    }
+
+    modalContent.style.transform = "";
+}
+
+sheetHandle.addEventListener(
+    "touchstart",
+    startSheetDrag,
+    { passive: true }
+);
+
+sheetHandle.addEventListener(
+    "touchmove",
+    moveSheetDrag,
+    { passive: true }
+);
+
+sheetHandle.addEventListener(
+    "touchend",
+    finishSheetDrag
+);
+
+sheetHandle.addEventListener(
+    "touchcancel",
+    finishSheetDrag
+);
+
+/* Стартиране */
 
 createProductsTable();
 loadCurrentData();
