@@ -54,11 +54,16 @@ const products = [
     "Кайсии"
 ];
 
+const STORAGE_KEY = "vegAppCurrentData";
+
 const productsTable =
     document.querySelector("#productsTable");
 
 const calculateButton =
     document.querySelector("#calculateButton");
+
+const clearButton =
+    document.querySelector("#clearButton");
 
 const totalOrderElement =
     document.querySelector("#totalOrder");
@@ -66,22 +71,20 @@ const totalOrderElement =
 const workDateInput =
     document.querySelector("#workDate");
 
-function setCurrentDate() {
+function getCurrentDate() {
     const now = new Date();
 
-    const year =
-        now.getFullYear();
+    const year = now.getFullYear();
 
-    const month =
-        String(now.getMonth() + 1)
-            .padStart(2, "0");
+    const month = String(
+        now.getMonth() + 1
+    ).padStart(2, "0");
 
-    const day =
-        String(now.getDate())
-            .padStart(2, "0");
+    const day = String(
+        now.getDate()
+    ).padStart(2, "0");
 
-    workDateInput.value =
-        `${year}-${month}-${day}`;
+    return `${year}-${month}-${day}`;
 }
 
 function createProductsTable() {
@@ -146,19 +149,18 @@ function calculateExpression(value) {
         return null;
     }
 
-    const numbers =
-        expression.split("+");
+    const numbers = expression.split("+");
 
-    const result =
-        numbers.reduce((sum, number) => {
+    const result = numbers.reduce(
+        (sum, number) => {
             return sum + Number(number);
-        }, 0);
+        },
+        0
+    );
 
-    if (!Number.isFinite(result)) {
-        return null;
-    }
-
-    return result;
+    return Number.isFinite(result)
+        ? result
+        : null;
 }
 
 function calculateStock(value) {
@@ -170,8 +172,7 @@ function calculateStock(value) {
         return 0;
     }
 
-    const number =
-        Number(normalizedValue);
+    const number = Number(normalizedValue);
 
     if (
         !Number.isFinite(number) ||
@@ -183,7 +184,13 @@ function calculateStock(value) {
     return number;
 }
 
-function calculateOrders() {
+function calculateOrders(options = {}) {
+    const replaceExpressions =
+        options.replaceExpressions ?? true;
+
+    const showAlert =
+        options.showAlert ?? true;
+
     let totalOrder = 0;
     let hasError = false;
 
@@ -252,18 +259,26 @@ function calculateOrders() {
             return;
         }
 
-        if (stockInput.value !== "") {
+        if (
+            replaceExpressions &&
+            stockInput.value !== ""
+        ) {
             stockInput.value =
                 formatNumber(stock);
         }
 
-        if (requiredInput.value !== "") {
+        if (
+            replaceExpressions &&
+            requiredInput.value !== ""
+        ) {
             requiredInput.value =
                 formatNumber(required);
         }
 
-        const orderAmount =
-            Math.max(required - stock, 0);
+        const orderAmount = Math.max(
+            required - stock,
+            0
+        );
 
         orderElement.textContent =
             formatNumber(orderAmount);
@@ -280,7 +295,9 @@ function calculateOrders() {
     totalOrderElement.textContent =
         `${formatNumber(totalOrder)} кг`;
 
-    if (hasError) {
+    saveCurrentData();
+
+    if (hasError && showAlert) {
         alert(
             "Има неправилно попълнени полета. " +
             "За колоната „Необходимо“ използвай формат: " +
@@ -289,19 +306,204 @@ function calculateOrders() {
     }
 }
 
+function collectCurrentData() {
+    const items = products.map(
+        (product, index) => {
+            const stockInput =
+                document.querySelector(
+                    `.stock-input[data-index="${index}"]`
+                );
+
+            const requiredInput =
+                document.querySelector(
+                    `.required-input[data-index="${index}"]`
+                );
+
+            return {
+                product,
+                stock: stockInput.value,
+                required: requiredInput.value
+            };
+        }
+    );
+
+    return {
+        date: workDateInput.value,
+        items
+    };
+}
+
+function saveCurrentData() {
+    try {
+        const currentData =
+            collectCurrentData();
+
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(currentData)
+        );
+    } catch (error) {
+        console.error(
+            "Грешка при запазване:",
+            error
+        );
+    }
+}
+
+function loadCurrentData() {
+    const savedData =
+        localStorage.getItem(STORAGE_KEY);
+
+    if (!savedData) {
+        workDateInput.value =
+            getCurrentDate();
+
+        return;
+    }
+
+    try {
+        const data =
+            JSON.parse(savedData);
+
+        workDateInput.value =
+            data.date || getCurrentDate();
+
+        if (!Array.isArray(data.items)) {
+            return;
+        }
+
+        const savedItemsByProduct =
+            new Map(
+                data.items.map((item) => [
+                    item.product,
+                    item
+                ])
+            );
+
+        products.forEach((product, index) => {
+            const savedItem =
+                savedItemsByProduct.get(product);
+
+            if (!savedItem) {
+                return;
+            }
+
+            const stockInput =
+                document.querySelector(
+                    `.stock-input[data-index="${index}"]`
+                );
+
+            const requiredInput =
+                document.querySelector(
+                    `.required-input[data-index="${index}"]`
+                );
+
+            stockInput.value =
+                savedItem.stock ?? "";
+
+            requiredInput.value =
+                savedItem.required ?? "";
+        });
+
+        calculateOrders({
+            replaceExpressions: false,
+            showAlert: false
+        });
+    } catch (error) {
+        console.error(
+            "Грешка при зареждане:",
+            error
+        );
+
+        workDateInput.value =
+            getCurrentDate();
+    }
+}
+
+function clearCurrentData() {
+    const confirmed = confirm(
+        "Сигурен ли си, че искаш да изчистиш всички въведени данни?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    document
+        .querySelectorAll(
+            ".stock-input, .required-input"
+        )
+        .forEach((input) => {
+            input.value = "";
+            input.classList.remove(
+                "input-error"
+            );
+        });
+
+    document
+        .querySelectorAll(".order-value")
+        .forEach((element) => {
+            element.textContent = "0";
+
+            element.classList.remove(
+                "positive",
+                "error"
+            );
+        });
+
+    workDateInput.value =
+        getCurrentDate();
+
+    totalOrderElement.textContent =
+        "0 кг";
+
+    localStorage.removeItem(
+        STORAGE_KEY
+    );
+}
+
 function formatNumber(number) {
     const roundedNumber =
         Math.round(number * 100) / 100;
 
-    return Number.isInteger(roundedNumber)
-        ? roundedNumber.toString()
-        : roundedNumber.toString();
+    return roundedNumber.toString();
 }
+
+productsTable.addEventListener(
+    "input",
+    (event) => {
+        if (
+            event.target.classList.contains(
+                "stock-input"
+            ) ||
+            event.target.classList.contains(
+                "required-input"
+            )
+        ) {
+            saveCurrentData();
+        }
+    }
+);
+
+workDateInput.addEventListener(
+    "change",
+    saveCurrentData
+);
 
 calculateButton.addEventListener(
     "click",
-    calculateOrders
+    () => {
+        calculateOrders({
+            replaceExpressions: true,
+            showAlert: true
+        });
+    }
 );
 
-setCurrentDate();
+clearButton.addEventListener(
+    "click",
+    clearCurrentData
+);
+
 createProductsTable();
+loadCurrentData();

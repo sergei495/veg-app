@@ -317,3 +317,39 @@ button:active {
         min-width: 120px;
     }
 }
+.bottom-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.clear-button {
+    min-width: auto;
+    background: #e5e7e5;
+    color: #333333;
+}
+
+.clear-button:hover {
+    background: #d9dcd9;
+}
+
+.save-status {
+    color: #667067;
+    font-size: 12px;
+}
+
+@media (max-width: 500px) {
+    .bottom-panel {
+        gap: 8px;
+    }
+
+    .bottom-actions {
+        gap: 6px;
+    }
+
+    .bottom-actions button {
+        min-width: auto;
+        padding-right: 13px;
+        padding-left: 13px;
+    }
+}
