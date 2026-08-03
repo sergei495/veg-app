@@ -91,7 +91,83 @@
             </div>
         </section>
     </main>
+<div
+    id="expressionModal"
+    class="modal"
+    aria-hidden="true"
+>
+    <div class="modal-backdrop"></div>
 
+    <section
+        class="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalProductName"
+    >
+        <div class="modal-header">
+            <div>
+                <p class="modal-label">
+                    Необходимо количество
+                </p>
+
+                <h2 id="modalProductName">
+                    Продукт
+                </h2>
+            </div>
+
+            <button
+                id="closeModalButton"
+                class="modal-close"
+                type="button"
+                aria-label="Затвори"
+            >
+                ×
+            </button>
+        </div>
+
+        <label
+            class="expression-label"
+            for="expressionInput"
+        >
+            Въведи количествата от всички заявки:
+        </label>
+
+        <textarea
+            id="expressionInput"
+            class="expression-input"
+            inputmode="text"
+            placeholder="Например: 20+30+12+11"
+            autocomplete="off"
+        ></textarea>
+
+        <div class="expression-preview">
+            Общо:
+            <strong id="expressionTotal">0 кг</strong>
+        </div>
+
+        <p
+            id="expressionError"
+            class="expression-error"
+        ></p>
+
+        <div class="modal-actions">
+            <button
+                id="cancelExpressionButton"
+                class="modal-cancel"
+                type="button"
+            >
+                Отказ
+            </button>
+
+            <button
+                id="saveExpressionButton"
+                type="button"
+            >
+                Готово
+            </button>
+        </div>
+    </section>
+</div>
     <script src="app.js"></script>
 </body>
 </html>
