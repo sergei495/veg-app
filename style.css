@@ -98,7 +98,7 @@ h1 {
 /* Таблица */
 
 .card {
-    overflow: hidden;
+    overflow: visible;
 
     border-radius: 16px;
     background: white;
@@ -119,20 +119,20 @@ table {
     table-layout: fixed;
 }
 
-thead {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
+ 
 
 th {
-    padding: 13px 5px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
 
+    padding: 13px 5px;
     background: #e9ebe9;
     color: #454545;
-
     font-size: 13px;
     text-align: center;
+
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
 }
 
 th:first-child {
@@ -617,4 +617,14 @@ body.modal-open {
         padding: 10px 9px;
         font-size: 14px;
     }
+}
+.product-row .product-name {
+    color: #a5a5a5;
+    font-weight: 500;
+    transition: all .2s ease;
+}
+
+.product-row.active .product-name {
+    color: #1b1b1b;
+    font-weight: 700;
 }

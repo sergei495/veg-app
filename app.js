@@ -1,6 +1,6 @@
 const productGroups = [
     {
-        name: "Билки и зелени подправки",
+        name: "Подправки",
         products: [
             "Босилек",
             "Джоджен",
@@ -245,9 +245,8 @@ function createProductsTable() {
         group.products.forEach((product) => {
             const index = productIndex;
 
-            const row =
-                document.createElement("tr");
-
+            const row = document.createElement("tr");
+row.className = "product-row";
             row.innerHTML = `
                 <td class="product-name">
                     ${product}
@@ -440,6 +439,7 @@ function calculateOrders(showAlert = true) {
         }
 
         totalOrder += orderAmount;
+        updateRowState(index);
     });
 
     totalOrderElement.textContent =
@@ -591,6 +591,37 @@ function saveExpression() {
     closeExpressionModal();
 }
 
+function updateRowState(index) {
+
+    const row =
+        document.querySelectorAll(".product-row")[index];
+
+    if (!row) return;
+
+    const stockInput =
+        document.querySelector(
+            `.stock-input[data-index="${index}"]`
+        );
+
+    const requiredInput =
+        document.querySelector(
+            `.required-input[data-index="${index}"]`
+        );
+
+    const stock =
+        Number(stockInput.value.replace(",", ".")) || 0;
+
+    const required =
+        calculateExpression(
+            requiredInput.dataset.expression || ""
+        ) || 0;
+
+    if (stock > 0 || required > 0) {
+        row.classList.add("active");
+    } else {
+        row.classList.remove("active");
+    }
+}
 /* Запазване в браузъра */
 
 function collectCurrentData() {
