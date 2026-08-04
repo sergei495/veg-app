@@ -628,3 +628,81 @@ body.modal-open {
     color: #1b1b1b;
     font-weight: 700;
 }
+.custom-keyboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+
+    margin-top: 10px;
+}
+
+.custom-keyboard button {
+    min-width: 0;
+    height: 48px;
+    padding: 0;
+
+    border: 1px solid #dddddd;
+    border-radius: 12px;
+
+    background: #f3f4f3;
+    color: #222222;
+
+    font-size: 20px;
+    font-weight: 650;
+
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.custom-keyboard button:active {
+    background: #dfe3df;
+    transform: scale(0.97);
+}
+
+.custom-keyboard .keyboard-plus {
+    background: #dfeadf;
+    color: #1f6e3d;
+    font-size: 25px;
+}
+
+.custom-keyboard .keyboard-backspace {
+    background: #ececec;
+    font-size: 22px;
+}
+
+.custom-keyboard .keyboard-clear {
+    background: #f4e8e8;
+    color: #9d3030;
+}
+
+.custom-keyboard .keyboard-decimal,
+.custom-keyboard .keyboard-zero-double {
+    font-size: 18px;
+}
+
+.expression-input {
+    cursor: default;
+    caret-color: transparent;
+}
+
+@media (max-width: 500px) {
+    .custom-keyboard {
+        gap: 7px;
+    }
+
+    .custom-keyboard button {
+        height: 46px;
+        font-size: 19px;
+    }
+}
+.expression-input:empty::before {
+    content: attr(data-placeholder);
+    color: #b4b4b4;
+}
+
+.expression-input {
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+}

@@ -149,16 +149,72 @@
                 Количества от заявките
             </label>
 
-            <textarea
-                id="expressionInput"
-                class="expression-input"
-                rows="1"
-                inputmode="decimal"
-                enterkeyhint="done"
-                autocomplete="off"
-                placeholder="Например: 20+30+12+11"
-            ></textarea>
+            <div
+    id="expressionInput"
+    class="expression-input"
+    role="textbox"
+    aria-readonly="true"
+    data-placeholder="Например: 20+30+12+11"
+></div>
+<div
+    id="customKeyboard"
+    class="custom-keyboard"
+>
+    <button type="button" data-key="7">7</button>
+    <button type="button" data-key="8">8</button>
+    <button type="button" data-key="9">9</button>
 
+    <button type="button" data-key="4">4</button>
+    <button type="button" data-key="5">5</button>
+    <button type="button" data-key="6">6</button>
+
+    <button type="button" data-key="1">1</button>
+    <button type="button" data-key="2">2</button>
+    <button type="button" data-key="3">3</button>
+
+    <button
+        type="button"
+        class="keyboard-clear"
+        data-action="clear"
+    >
+        C
+    </button>
+
+    <button type="button" data-key="0">0</button>
+
+    <button
+        type="button"
+        class="keyboard-plus"
+        data-key="+"
+    >
+        +
+    </button>
+
+    <button
+        type="button"
+        class="keyboard-decimal"
+        data-key="."
+    >
+        ,
+    </button>
+
+    <button
+        type="button"
+        class="keyboard-zero-double"
+        data-key="00"
+    >
+        00
+    </button>
+
+    <button
+        type="button"
+        class="keyboard-backspace"
+        data-action="backspace"
+        aria-label="Изтрий последния символ"
+    >
+        ⌫
+    </button>
+</div>
             <div class="expression-preview">
                 <span>Общо</span>
 

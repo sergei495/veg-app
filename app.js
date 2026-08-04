@@ -481,8 +481,8 @@ function openExpressionModal(index) {
     modalProductName.textContent =
         products[index];
 
-    expressionInput.value =
-        requiredInput.dataset.expression || "";
+    expressionInput.textContent =
+    requiredInput.dataset.expression || "";
 
     expressionError.textContent = "";
 
@@ -500,17 +500,7 @@ function openExpressionModal(index) {
         "modal-open"
     );
 
-    window.setTimeout(() => {
-        expressionInput.focus();
-
-        const textLength =
-            expressionInput.value.length;
-
-        expressionInput.setSelectionRange(
-            textLength,
-            textLength
-        );
-    }, 100);
+    
 }
 
 function closeExpressionModal() {
@@ -534,9 +524,9 @@ function closeExpressionModal() {
 
 function updateExpressionPreview() {
     const result =
-        calculateExpression(
-            expressionInput.value
-        );
+    calculateExpression(
+        expressionInput.textContent
+    );
 
     if (result === null) {
         expressionTotal.textContent = "—";
@@ -559,9 +549,9 @@ function saveExpression() {
     }
 
     const expression =
-        expressionInput.value
-            .replaceAll(" ", "")
-            .replaceAll("\n", "");
+    expressionInput.textContent
+        .replaceAll(" ", "")
+        .replaceAll("\n", "");
 
     const result =
         calculateExpression(expression);
