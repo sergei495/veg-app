@@ -592,3 +592,29 @@ body.modal-open {
         max-height: 64dvh;
     }
 }
+.category-row td {
+    height: auto;
+    padding: 12px 14px;
+
+    border-top: 2px solid #d8ded9;
+    border-bottom: 1px solid #d8ded9;
+
+    background: #dde7df;
+    color: #294733;
+
+    font-size: 15px;
+    font-weight: 750;
+    text-align: left;
+    letter-spacing: 0.2px;
+}
+
+.category-row:first-child td {
+    border-top: none;
+}
+
+@media (max-width: 500px) {
+    .category-row td {
+        padding: 10px 9px;
+        font-size: 14px;
+    }
+}

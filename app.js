@@ -1,58 +1,151 @@
-const products = [
-    "Магданоз",
-    "Копър",
-    "Целина",
-    "Дивесил",
-    "Мащерка",
-    "Пресен лук",
-    "Босилек",
-    "Мента",
-    "Джоджен",
+const productGroups = [
+    {
+        name: "Билки и зелени подправки",
+        products: [
+            "Босилек",
+            "Джоджен",
+            "Копър",
+            "Магданоз",
+            "Пресен чесън",
+            "Люцерна/Девесил",
+            "Кориандър",
+            "Мащерка",
+            "Мента",
+            "Пресен лук",
+            "Розмарин",
+            "Рукола",
+            "Салвия",
+            "Див лук",
+            "Кълнове",
+            "Микрорастения"
+        ]
+    },
+    {
+        name: "Зеленчуци",
+        products: [
+            "Авокадо",
+            "Батат",
+            "Броколи",
+            "Гъби",
 
-    "Червен домат",
-    "Розов домат",
-    "Черри домат",
-    "Краставица",
-    "Тиквичка",
-    "Патладжан",
+            "Розов домат Екстра",
+            "Домат чери",
+            "Домат I клас",
+            "Домат II клас",
 
-    "Червен пипер",
-    "Зелен пипер",
-    "Пипер долма",
-    "Пипер сиврия",
+            "Зеле",
+            "Зеле червено",
+            "Дребни картофи",
+            "Картофи",
+            "Картофи мит",
 
-    "Моркови",
-    "Чесън",
-    "Цвекло",
-    "Целина глава",
+            "Китайско зеле",
+            "Карфиол",
+            "Джинджифил",
 
-    "Стар картоф",
-    "Мит картоф",
-    "Дребен картоф",
+            "Краставици I",
+            "Краставици II",
 
-    "Лук",
-    "Червен лук",
+            "Лук жълт",
+            "Лук червен",
+            "Люти чушки",
 
-    "Лимони",
-    "Портокал фреш",
-    "Портокал десертен",
-    "Банан",
-    "Лайм",
-    "Грейпфрут",
+            "Моркови",
+            "Патладжан",
 
-    "Ябълка зелена",
-    "Ябълка червена",
-    "Ябълка жълта",
+            "Пипер зелен",
+            "Пипер червен",
+            "Пащърнак",
+            "Пипер долма",
+            "Пипер сиврия",
 
-    "Грозде бяло",
-    "Грозде черно",
-    "Грозде червено",
+            "Репички",
+            "Ряпа дълга",
+            "Тиква",
+            "Тиквички",
 
-    "Праскови",
-    "Нектарини",
-    "Сливи",
-    "Кайсии"
+            "Цвекло",
+            "Целина глава",
+            "Чесън",
+
+            "Радичио",
+            "Камби зелени",
+            "Камби червени",
+            "Алабаш",
+            "Праз",
+
+            "Айсберг",
+            "Аспержи",
+            "Бейби спанак",
+            "Зелена салата",
+            "Селъри",
+            "Спанак",
+            "Целина",
+            "Червена салата",
+            "Салата микс",
+            "Фенел"
+        ]
+    },
+    {
+        name: "Плодове",
+        products: [
+            "Нектарини",
+            "Праскови",
+            "Кайсии",
+
+            "Боровинки",
+            "Малини",
+            "Къпини",
+
+            "Круша",
+            "Сливи",
+            "Нар",
+            "Пъпеши",
+
+            "Бяло грозде",
+            "Черно грозде",
+
+            "Ябълка шарена",
+            "Ябълка жълта",
+            "Ябълка зелена",
+            "Ябълки червена",
+            "Дребна ябълка",
+
+            "Ананас",
+            "Банани",
+            "Грейпфрут",
+            "Киви",
+            "Лайм",
+            "Лимони",
+            "Манго",
+            "Мандарини",
+
+            "Портокал фреш",
+            "Портокали-десертен",
+
+            "Физалис",
+            "Череши",
+            "Ягоди",
+            "Диня"
+        ]
+    },
+    {
+        name: "Други продукти",
+        products: [
+            "Боб",
+            "Леща (насипна)",
+            "Орех",
+            "Кашу-суров",
+            "Бадем-суров",
+            "Мешена туршия",
+            "Кисело зеле"
+        ]
+    }
 ];
+
+const products = productGroups.flatMap(
+    (group) => group.products
+);
 
 const STORAGE_KEY = "vegAppCurrentData";
 
@@ -130,50 +223,74 @@ function getCurrentDate() {
 function createProductsTable() {
     productsTable.innerHTML = "";
 
-    products.forEach((product, index) => {
-        const row =
+    let productIndex = 0;
+
+    productGroups.forEach((group) => {
+        const categoryRow =
             document.createElement("tr");
 
-        row.innerHTML = `
-            <td class="product-name">
-                ${product}
-            </td>
+        categoryRow.className =
+            "category-row";
 
-            <td>
-                <input
-                    type="text"
-                    class="number-input stock-input"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    placeholder="0"
-                    data-index="${index}"
-                    aria-label="Остатък за ${product}"
-                >
-            </td>
-
-            <td>
-                <input
-                    type="text"
-                    class="number-input required-input"
-                    inputmode="none"
-                    autocomplete="off"
-                    placeholder="0"
-                    readonly
-                    data-index="${index}"
-                    data-expression=""
-                    aria-label="Необходимо за ${product}"
-                >
-            </td>
-
-            <td
-                class="order-value"
-                data-order-index="${index}"
-            >
-                0
+        categoryRow.innerHTML = `
+            <td colspan="4">
+                ${group.name}
             </td>
         `;
 
-        productsTable.appendChild(row);
+        productsTable.appendChild(
+            categoryRow
+        );
+
+        group.products.forEach((product) => {
+            const index = productIndex;
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+                <td class="product-name">
+                    ${product}
+                </td>
+
+                <td>
+                    <input
+                        type="text"
+                        class="number-input stock-input"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        placeholder="0"
+                        data-index="${index}"
+                        aria-label="Остатък за ${product}"
+                    >
+                </td>
+
+                <td>
+                    <input
+                        type="text"
+                        class="number-input required-input"
+                        inputmode="none"
+                        autocomplete="off"
+                        placeholder="0"
+                        readonly
+                        data-index="${index}"
+                        data-expression=""
+                        aria-label="Необходимо за ${product}"
+                    >
+                </td>
+
+                <td
+                    class="order-value"
+                    data-order-index="${index}"
+                >
+                    0
+                </td>
+            `;
+
+            productsTable.appendChild(row);
+
+            productIndex++;
+        });
     });
 }
 
