@@ -237,7 +237,7 @@
                     const newQty = parseFloat((existingItem.qty + qty).toFixed(2));
                     await supabaseClient.from('veg_items').update({ qty: newQty, created_at: new Date().toISOString() }).eq('id', existingItem.id);
                 } else {
-                    const newItem = { id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, created_at: new Date().toISOString() };
+                    const newItem = { id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, is_ordered: false, created_at: new Date().toISOString() };
                     await supabaseClient.from('veg_items').insert([newItem]);
                 }
             } else {
@@ -245,7 +245,7 @@
                     existingItem.qty = parseFloat((existingItem.qty + qty).toFixed(2));
                     existingItem.created_at = new Date().toISOString();
                 } else {
-                    items.unshift({ id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, created_at: new Date().toISOString() });
+                    items.unshift({ id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, is_ordered: false, created_at: new Date().toISOString() });
                 }
                 localStorage.setItem('veg_local_items', JSON.stringify(items));
             }
@@ -266,6 +266,21 @@
                 await supabaseClient.from('veg_items').update({ type: newType }).eq('id', id);
             } else {
                 item.type = newType;
+                localStorage.setItem('veg_local_items', JSON.stringify(items));
+            }
+            await loadItems();
+        }
+
+        async function toggleItemOrdered(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            const newOrderedStatus = !item.is_ordered;
+
+            if (supabaseClient) {
+                await supabaseClient.from('veg_items').update({ is_ordered: newOrderedStatus }).eq('id', id);
+            } else {
+                item.is_ordered = newOrderedStatus;
                 localStorage.setItem('veg_local_items', JSON.stringify(items));
             }
             await loadItems();
@@ -341,26 +356,36 @@
                 
                 const timeStr = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const itemType = item.type || 'warehouse';
+                const isOrdered = item.is_ordered || false;
 
                 const typeBadgeHtml = itemType === 'drive'
-                    ? `<button onclick="toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Склад" class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition flex items-center justify-center font-bold text-sm">
+                    ? `<button onclick="toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Склад" class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition flex items-center justify-center font-bold text-sm shrink-0">
                         <i class="fa-solid fa-truck"></i>
                        </button>`
-                    : `<button onclick="toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Ехать" class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition flex items-center justify-center font-bold text-sm">
+                    : `<button onclick="toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Ехать" class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition flex items-center justify-center font-bold text-sm shrink-0">
                         <i class="fa-solid fa-warehouse"></i>
                        </button>`;
 
+                const orderBadgeHtml = isOrdered
+                    ? `<button onclick="toggleItemOrdered('${item.id}')" title="Заказано (Нажмите, чтобы отменить)" class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 border border-emerald-300 transition flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-check text-xs font-bold"></i>
+                       </button>`
+                    : `<button onclick="toggleItemOrdered('${item.id}')" title="Не заказано (Нажмите, чтобы отметить)" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-200 transition flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-xmark text-xs font-bold"></i>
+                       </button>`;
+
                 card.innerHTML = `
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 min-w-0 pr-2">
                         ${typeBadgeHtml}
-                        <div>
-                            <div class="font-semibold text-gray-800 capitalize text-sm flex items-center gap-2">
+                        <div class="min-w-0">
+                            <div class="font-semibold ${isOrdered ? 'text-gray-400 line-through' : 'text-gray-800'} capitalize text-sm truncate">
                                 ${item.name}
                             </div>
                             <div class="text-[10px] text-gray-400">${timeStr} • ${itemType === 'drive' ? 'Ехать' : 'Склад'}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 shrink-0">
+                        ${orderBadgeHtml}
                         <div class="text-right mr-1">
                             <span class="font-bold text-gray-800 text-base">${item.qty}</span>
                             <span class="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium">${item.unit}</span>
