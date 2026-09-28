@@ -2,187 +2,400 @@
 <html lang="bg">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    >
-
-    <title>Склад за плодове и зеленчуци</title>
-
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Склад и Заявки - Плодове и Зеленчуци</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
 </head>
+<body class="p-3 md:p-6 text-gray-800 min-h-screen flex flex-col items-center">
 
-<body>
-    <main class="container">
-        <header class="page-header">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 text-white flex justify-between items-center">
             <div>
-                <p class="subtitle">
-                    Изчисляване на заявката
-                </p>
-
-                <h1>Склад</h1>
+                <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                    <i class="fa-solid from-emerald-500 fa-carrot"></i> Инвентар & Заявки
+                </h1>
+                <p class="text-xs text-emerald-100 mt-1">Автоматично сумиране & Облачна синхронизация</p>
             </div>
-
-            <div class="date-block">
-                <label for="workDate">
-                    Дата
-                </label>
-
-                <input
-                    type="date"
-                    id="workDate"
-                >
-            </div>
-        </header>
-
-        <section class="info-box">
-            <strong>Как се попълва:</strong>
-
-            <span>
-                Натисни полето „Необходимо“ и въведи:
-                20+30+12+11
-            </span>
-        </section>
-
-        <section class="card">
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="product-column">
-                                Продукт
-                            </th>
-
-                            <th>
-                                Остатък
-                            </th>
-
-                            <th>
-                                Необходимо
-                            </th>
-
-                            <th>
-                                За поръчка
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="productsTable"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="bottom-panel">
-            <div class="total">
-                Общо за поръчка:
-
-                <strong id="totalOrder">
-                    0 кг
-                </strong>
-            </div>
-
-            <div class="bottom-actions">
-                <button
-                    id="clearButton"
-                    class="clear-button"
-                    type="button"
-                >
-                    Изчисти
-                </button>
-
-                <button
-                    id="calculateButton"
-                    type="button"
-                >
-                    Изчисли
-                </button>
-            </div>
-        </section>
-    </main>
-
-    <!-- Долен прозорец за въвеждане -->
-    <div
-        id="expressionModal"
-        class="modal"
-        aria-hidden="true"
-    >
-        <div class="modal-backdrop"></div>
-
-        <section
-            class="modal-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modalProductName"
-        >
-            <div
-                id="sheetHandle"
-                class="sheet-handle"
-                aria-hidden="true"
-            ></div>
-
-            <div class="modal-header">
-                <div>
-                    <p class="modal-label">
-                        Необходимо количество
-                    </p>
-
-                    <h2 id="modalProductName">
-                        Продукт
-                    </h2>
-                </div>
-
-                <button
-                    id="closeModalButton"
-                    class="modal-close"
-                    type="button"
-                    aria-label="Затвори"
-                >
-                    ×
-                </button>
-            </div>
-
-            <label
-                class="expression-label"
-                for="expressionInput"
-            >
-                Количества от заявките
-            </label>
-
-            <textarea
-                id="expressionInput"
-                class="expression-input"
-                rows="1"
-                inputmode="text"
-                enterkeyhint="done"
-                autocomplete="off"
-                placeholder="Например: 20+30+12+11"
-            ></textarea>
-
-            <div class="expression-preview">
-                <span>Общо</span>
-
-                <strong id="expressionTotal">
-                    0 кг
-                </strong>
-            </div>
-
-            <p
-                id="expressionError"
-                class="expression-error"
-                aria-live="polite"
-            ></p>
-
-            <button
-                id="saveExpressionButton"
-                class="save-expression-button"
-                type="button"
-            >
-                Готово
+            <button onclick="toggleCloudModal()" class="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5 backdrop-blur-sm">
+                <i class="fa-solid fa-cloud"></i> Облак настройки
             </button>
-        </section>
+        </div>
+
+        <!-- Status Bar -->
+        <div id="statusBar" class="bg-amber-50 border-b border-amber-200 text-amber-800 text-xs px-4 py-2 flex justify-between items-center">
+            <span><i class="fa-solid fa-circle-info mr-1"></i> Статус: <strong id="statusText">Локален режим (Настройте облака)</strong></span>
+            <button onclick="syncData()" class="text-amber-900 hover:underline font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-rotate"></i> Опресни
+            </button>
+        </div>
+
+        <!-- Input Form -->
+        <div class="p-4 md:p-6 bg-slate-50 border-b border-gray-200">
+            <h2 class="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wider">Добави или добави към позиция</h2>
+            <form id="addForm" onsubmit="handleFormSubmit(event)" class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div class="md:col-span-6">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Продукт (напр. Гъби)</label>
+                        <input type="text" id="productName" required placeholder="Продукт / Стока" 
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Количество</label>
+                        <input type="number" id="productQty" step="any" required placeholder="0" 
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Тара / Опаковка</label>
+                        <select id="productUnit" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
+                            <option value="kaca">kaca (каси)</option>
+                            <option value="kg">kg (килограми)</option>
+                            <option value="кашон">кашон</option>
+                            <option value="палет">палет</option>
+                            <option value="торба">торба</option>
+                            <option value="брой">брой</option>
+                            <option value="пакет">пакет</option>
+                            <option value="мрежа">мрежа</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-plus"></i> Добави / Добави към сумата
+                </button>
+            </form>
+        </div>
+
+        <!-- Summary / Total Section -->
+        <div class="p-4 md:p-6 bg-emerald-50/60 border-b border-emerald-100">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-emerald-600"></i> Обща поръчка (Сумма)
+                </h2>
+                <button onclick="copySummary()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-md transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Копирай заявката
+                </button>
+            </div>
+            <div id="summaryList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <!-- Summed totals will appear here -->
+            </div>
+        </div>
+
+        <!-- Detailed List -->
+        <div class="p-4 md:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Списък по записи</h2>
+                <span id="itemCount" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">0 позиции</span>
+            </div>
+
+            <div id="itemsList" class="space-y-2">
+                <!-- Items list rendered here -->
+            </div>
+        </div>
+
     </div>
 
-    <script src="app.js"></script>
+    <!-- Modal for Quick Add -->
+    <div id="quickAddModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-xs w-full p-5 shadow-2xl">
+            <h3 class="font-bold text-gray-800 text-base mb-2">Прибави количество</h3>
+            <p id="quickAddTitle" class="text-xs text-gray-500 mb-4"></p>
+            <input type="number" id="quickAddQty" step="any" placeholder="Количество за прибавяне (напр. 2)" class="w-full px-3 py-2 border rounded-lg mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeQuickAddModal()" class="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg">Отказ</button>
+                <button onclick="applyQuickAdd()" class="px-4 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Прибави</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Cloud Settings -->
+    <div id="cloudModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-cloud text-emerald-600"></i> Облачна синхронизация
+                </h3>
+                <button onclick="toggleCloudModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <p class="text-xs text-gray-600">Въведете вашите Supabase ключове за синхронизация между Mac и телефон.</p>
+
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Supabase URL</label>
+                    <input type="text" id="supabaseUrl" placeholder="https://xyz.supabase.co" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Supabase Anon Key</label>
+                    <input type="password" id="supabaseKey" placeholder="eyJhbGciOi..." class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-xs">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="toggleCloudModal()" class="px-4 py-2 text-xs text-gray-600 hover:bg-gray-100 rounded-lg">Отказ</button>
+                <button onclick="saveCloudSettings()" class="px-4 py-2 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Запази</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+        let supabaseClient = null;
+        let activeQuickAddId = null;
+
+        window.onload = function() {
+            initSupabase();
+            loadItems();
+        };
+
+        function initSupabase() {
+            const url = localStorage.getItem('veg_supabase_url');
+            const key = localStorage.getItem('veg_supabase_key');
+
+            if (url && key) {
+                document.getElementById('supabaseUrl').value = url;
+                document.getElementById('supabaseKey').value = key;
+                try {
+                    supabaseClient = supabase.createClient(url, key);
+                    document.getElementById('statusText').innerText = "Облачна синхронизация активна";
+                    document.getElementById('statusBar').className = "bg-emerald-50 border-b border-emerald-200 text-emerald-800 text-xs px-4 py-2 flex justify-between items-center";
+                } catch (e) {
+                    console.error("Supabase Init Error", e);
+                }
+            }
+        }
+
+        function saveCloudSettings() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            localStorage.setItem('veg_supabase_url', url);
+            localStorage.setItem('veg_supabase_key', key);
+
+            toggleCloudModal();
+            initSupabase();
+            syncData();
+        }
+
+        function toggleCloudModal() {
+            const modal = document.getElementById('cloudModal');
+            modal.classList.toggle('hidden');
+        }
+
+        async function loadItems() {
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('veg_items')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+
+                    if (!error && data) {
+                        items = data;
+                        renderList();
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Fetch error:", e);
+                }
+            }
+            const localData = localStorage.getItem('veg_items_local');
+            items = localData ? JSON.parse(localData) : [];
+            renderList();
+        }
+
+        function saveLocal() {
+            localStorage.setItem('veg_items_local', JSON.stringify(items));
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('productName');
+            const qtyInput = document.getElementById('productQty');
+            const unitInput = document.getElementById('productUnit');
+
+            const name = nameInput.value.trim().toLowerCase();
+            const qty = parseFloat(qtyInput.value);
+            const unit = unitInput.value;
+
+            // Check if item with same name and unit exists -> Auto-sum
+            const existingIndex = items.findIndex(item => item.name.toLowerCase() === name && item.unit === unit);
+
+            if (existingIndex !== -1) {
+                items[existingIndex].qty = parseFloat((items[existingIndex].qty + qty).toFixed(2));
+                items[existingIndex].created_at = new Date().toISOString();
+                
+                if (supabaseClient) {
+                    await supabaseClient.from('veg_items').update({ qty: items[existingIndex].qty }).eq('id', items[existingIndex].id);
+                }
+            } else {
+                const newItem = {
+                    id: Date.now().toString(),
+                    name: name,
+                    qty: qty,
+                    unit: unit,
+                    created_at: new Date().toISOString()
+                };
+                items.unshift(newItem);
+
+                if (supabaseClient) {
+                    await supabaseClient.from('veg_items').insert([newItem]);
+                }
+            }
+
+            saveLocal();
+            renderList();
+
+            nameInput.value = '';
+            qtyInput.value = '';
+            nameInput.focus();
+        }
+
+        function openQuickAdd(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            activeQuickAddId = id;
+            document.getElementById('quickAddTitle').innerText = `${item.name} (${item.unit})`;
+            document.getElementById('quickAddQty').value = '';
+            document.getElementById('quickAddModal').classList.remove('hidden');
+            document.getElementById('quickAddQty').focus();
+        }
+
+        function closeQuickAddModal() {
+            document.getElementById('quickAddModal').classList.add('hidden');
+            activeQuickAddId = null;
+        }
+
+        async function applyQuickAdd() {
+            const addQty = parseFloat(document.getElementById('quickAddQty').value);
+            if (isNaN(addQty) || !activeQuickAddId) return;
+
+            const item = items.find(i => i.id === activeQuickAddId);
+            if (item) {
+                item.qty = parseFloat((item.qty + addQty).toFixed(2));
+                saveLocal();
+                if (supabaseClient) {
+                    await supabaseClient.from('veg_items').update({ qty: item.qty }).eq('id', item.id);
+                }
+                renderList();
+            }
+            closeQuickAddModal();
+        }
+
+        async function deleteItem(id) {
+            items = items.filter(i => i.id !== id);
+            saveLocal();
+            renderList();
+
+            if (supabaseClient) {
+                await supabaseClient.from('veg_items').delete().eq('id', id);
+            }
+        }
+
+        function renderList() {
+            const container = document.getElementById('itemsList');
+            const summaryContainer = document.getElementById('summaryList');
+            const itemCount = document.getElementById('itemCount');
+
+            container.innerHTML = '';
+            summaryContainer.innerHTML = '';
+            itemCount.innerText = `${items.length} позиции`;
+
+            if (items.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm">Няма намерени записи.</div>`;
+                summaryContainer.innerHTML = `<div class="col-span-2 text-center py-2 text-gray-400 text-xs">Няма данни за сумиране.</div>`;
+                return;
+            }
+
+            // Calculate Totals per Product + Unit
+            const totals = {};
+            items.forEach(item => {
+                const key = `${item.name}__${item.unit}`;
+                if (!totals[key]) {
+                    totals[key] = { name: item.name, unit: item.unit, qty: 0 };
+                }
+                totals[key].qty += item.qty;
+            });
+
+            // Render Summary
+            Object.values(totals).forEach(tot => {
+                const sumBadge = document.createElement('div');
+                sumBadge.className = "bg-white p-2.5 rounded-lg border border-emerald-200 flex justify-between items-center shadow-sm";
+                sumBadge.innerHTML = `
+                    <span class="font-medium text-emerald-950 capitalize">${tot.name}</span>
+                    <span class="font-bold text-emerald-700">${tot.qty} <span class="text-xs font-normal text-emerald-600">${tot.unit}</span></span>
+                `;
+                summaryContainer.appendChild(sumBadge);
+            });
+
+            // Render List Items
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-emerald-200 transition";
+                
+                const timeStr = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm capitalize">
+                            ${item.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-800 capitalize text-sm">${item.name}</div>
+                            <div class="text-[10px] text-gray-400">${timeStr}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-right">
+                            <span class="font-bold text-gray-800 text-base">${item.qty}</span>
+                            <span class="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium">${item.unit}</span>
+                        </div>
+                        <button onclick="openQuickAdd('${item.id}')" title="Прибави към записа" class="w-7 h-7 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center transition">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                        <button onclick="deleteItem('${item.id}')" title="Изтрий" class="w-7 h-7 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function copySummary() {
+            const totals = {};
+            items.forEach(item => {
+                const key = `${item.name}__${item.unit}`;
+                if (!totals[key]) {
+                    totals[key] = { name: item.name, unit: item.unit, qty: 0 };
+                }
+                totals[key].qty += item.qty;
+            });
+
+            let text = "📋 ОБЩА ЗАЯВКА:\n";
+            Object.values(totals).forEach(tot => {
+                text += `• ${tot.name.toUpperCase()}: ${tot.qty} ${tot.unit}\n`;
+            });
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Заявката е копирана в клипборда!");
+            });
+        }
+
+        async function syncData() {
+            await loadItems();
+        }
+    </script>
 </body>
 </html>
