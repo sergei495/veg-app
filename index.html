@@ -143,11 +143,19 @@
         window.onload = function() {
             initSupabase();
             loadItems();
+            // Автоматическое обновление данных каждые 3 секунды
+            setInterval(syncData, 3000);
         };
 
+        function cleanUrl(url) {
+            if (!url) return '';
+            return url.trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/, '');
+        }
+
         function initSupabase() {
-            const url = localStorage.getItem('veg_supabase_url');
+            const rawUrl = localStorage.getItem('veg_supabase_url');
             const key = localStorage.getItem('veg_supabase_key');
+            const url = cleanUrl(rawUrl);
 
             if (url && key) {
                 document.getElementById('supabaseUrl').value = url;
@@ -163,8 +171,9 @@
         }
 
         function saveCloudSettings() {
-            const url = document.getElementById('supabaseUrl').value.trim();
+            const rawUrl = document.getElementById('supabaseUrl').value;
             const key = document.getElementById('supabaseKey').value.trim();
+            const url = cleanUrl(rawUrl);
 
             localStorage.setItem('veg_supabase_url', url);
             localStorage.setItem('veg_supabase_key', key);
@@ -189,6 +198,7 @@
 
                     if (!error && data) {
                         items = data;
+                        saveLocal();
                         renderList();
                         return;
                     }
@@ -215,15 +225,16 @@
             const qty = parseFloat(qtyInput.value);
             const unit = unitInput.value;
 
-            // Check if item with same name and unit exists -> Auto-sum
+            // Сначала обновляем локальный массив
             const existingIndex = items.findIndex(item => item.name.toLowerCase() === name && item.unit === unit);
 
             if (existingIndex !== -1) {
-                items[existingIndex].qty = parseFloat((items[existingIndex].qty + qty).toFixed(2));
+                const updatedQty = parseFloat((items[existingIndex].qty + qty).toFixed(2));
+                items[existingIndex].qty = updatedQty;
                 items[existingIndex].created_at = new Date().toISOString();
                 
                 if (supabaseClient) {
-                    await supabaseClient.from('veg_items').update({ qty: items[existingIndex].qty }).eq('id', items[existingIndex].id);
+                    await supabaseClient.from('veg_items').update({ qty: updatedQty, created_at: items[existingIndex].created_at }).eq('id', items[existingIndex].id);
                 }
             } else {
                 const newItem = {
@@ -284,20 +295,22 @@
 
             const item = items.find(i => i.id === activeItemId);
             if (item) {
+                let newQty = item.qty;
                 if (activeMode === 'add') {
-                    item.qty = parseFloat((item.qty + val).toFixed(2));
+                    newQty = parseFloat((item.qty + val).toFixed(2));
                 } else {
-                    item.qty = parseFloat((item.qty - val).toFixed(2));
+                    newQty = parseFloat((item.qty - val).toFixed(2));
                 }
 
-                if (item.qty <= 0) {
-                    deleteItem(item.id);
+                if (newQty <= 0) {
+                    await deleteItem(item.id);
                 } else {
+                    item.qty = newQty;
                     saveLocal();
-                    if (supabaseClient) {
-                        await supabaseClient.from('veg_items').update({ qty: item.qty }).eq('id', item.id);
-                    }
                     renderList();
+                    if (supabaseClient) {
+                        await supabaseClient.from('veg_items').update({ qty: newQty }).eq('id', item.id);
+                    }
                 }
             }
             closeQuickModal();
@@ -325,7 +338,6 @@
                 return;
             }
 
-            // Render List Items
             items.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-emerald-200 transition";
