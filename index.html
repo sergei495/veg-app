@@ -110,9 +110,8 @@
     </div>
 
     <script>
-        // Жёстко вшитые параметры Supabase
         const SUPABASE_URL = "https://jsamkbbzibtleglnspzt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzYW1rYmJ6aWJ0bGVnbG5zcHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2MDc2ODMsImV4cCI6MjEwNjE4MzY4M30.-gEZRKubV5zOmSo_rflO340SOywx3oh22u5gOolYDjU; // Ваш publishable key из скрина
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzYW1rYmJ6aWJ0bGVnbG5zcHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTAzOTA2M0MsImV4cCI6MjA1MzA2MDYzM30.-gEZRkubV5zOmSo_rf10348S0ywx3oh22u5gOolYDju";
 
         let supabaseClient = null;
         let items = [];
@@ -120,12 +119,10 @@
         let activeMode = 'add';
 
         window.onload = async function() {
-            // Очищаем старый нерабочий кэш
             localStorage.removeItem('veg_supabase_url');
             localStorage.removeItem('veg_supabase_key');
 
             try {
-                // Инициализация Supabase
                 supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
                     auth: { persistSession: false }
                 });
@@ -137,8 +134,6 @@
             }
 
             await loadItems();
-
-            // Авто-обновление каждые 3 секунды
             setInterval(loadItems, 3000);
         };
 
