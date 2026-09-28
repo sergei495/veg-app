@@ -47,12 +47,19 @@
             <h2 class="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wider">Добави или промени позиция</h2>
             <form id="addForm" onsubmit="handleFormSubmit(event)" class="space-y-3">
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                    <div class="md:col-span-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Тип</label>
+                        <select id="productType" class="w-full px-2 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white font-medium">
+                            <option value="warehouse">🏭 Склад</option>
+                            <option value="drive">🚚 Ехать</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-5">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Продукт (напр. Гъби)</label>
                         <input type="text" id="productName" required placeholder="Продукт / Стока" 
                             class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                     </div>
-                    <div class="md:col-span-3">
+                    <div class="md:col-span-2">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Количество</label>
                         <input type="number" id="productQty" step="any" required placeholder="0" 
                             class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
@@ -211,24 +218,26 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
+            const typeInput = document.getElementById('productType');
             const nameInput = document.getElementById('productName');
             const qtyInput = document.getElementById('productQty');
             const unitInput = document.getElementById('productUnit');
 
+            const type = typeInput.value;
             const name = nameInput.value.trim().toLowerCase();
             const qty = parseFloat(qtyInput.value);
             const unit = unitInput.value;
 
             if (!name || isNaN(qty)) return;
 
-            const existingItem = items.find(item => item.name.toLowerCase() === name && item.unit === unit);
+            const existingItem = items.find(item => item.name.toLowerCase() === name && item.unit === unit && (item.type || 'warehouse') === type);
 
             if (supabaseClient) {
                 if (existingItem) {
                     const newQty = parseFloat((existingItem.qty + qty).toFixed(2));
                     await supabaseClient.from('veg_items').update({ qty: newQty, created_at: new Date().toISOString() }).eq('id', existingItem.id);
                 } else {
-                    const newItem = { id: Date.now().toString(), name: name, qty: qty, unit: unit, created_at: new Date().toISOString() };
+                    const newItem = { id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, created_at: new Date().toISOString() };
                     await supabaseClient.from('veg_items').insert([newItem]);
                 }
             } else {
@@ -236,7 +245,7 @@
                     existingItem.qty = parseFloat((existingItem.qty + qty).toFixed(2));
                     existingItem.created_at = new Date().toISOString();
                 } else {
-                    items.unshift({ id: Date.now().toString(), name: name, qty: qty, unit: unit, created_at: new Date().toISOString() });
+                    items.unshift({ id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, created_at: new Date().toISOString() });
                 }
                 localStorage.setItem('veg_local_items', JSON.stringify(items));
             }
@@ -244,6 +253,21 @@
             nameInput.value = '';
             qtyInput.value = '';
             nameInput.focus();
+            await loadItems();
+        }
+
+        async function toggleItemType(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            const newType = (item.type === 'drive') ? 'warehouse' : 'drive';
+
+            if (supabaseClient) {
+                await supabaseClient.from('veg_items').update({ type: newType }).eq('id', id);
+            } else {
+                item.type = newType;
+                localStorage.setItem('veg_local_items', JSON.stringify(items));
+            }
             await loadItems();
         }
 
@@ -316,15 +340,24 @@
                 card.className = "bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-emerald-200 transition";
                 
                 const timeStr = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const itemType = item.type || 'warehouse';
+
+                const typeBadgeHtml = itemType === 'drive'
+                    ? `<button onclick="toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Склад" class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-truck"></i>
+                       </button>`
+                    : `<button onclick="toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Ехать" class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-warehouse"></i>
+                       </button>`;
 
                 card.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm capitalize">
-                            ${item.name.charAt(0)}
-                        </div>
+                        ${typeBadgeHtml}
                         <div>
-                            <div class="font-semibold text-gray-800 capitalize text-sm">${item.name}</div>
-                            <div class="text-[10px] text-gray-400">${timeStr}</div>
+                            <div class="font-semibold text-gray-800 capitalize text-sm flex items-center gap-2">
+                                ${item.name}
+                            </div>
+                            <div class="text-[10px] text-gray-400">${timeStr} • ${itemType === 'drive' ? 'Ехать' : 'Склад'}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
