@@ -29,17 +29,22 @@
                 </h1>
                 <p class="text-xs text-emerald-100 mt-1">Автоматично сумиране & Облачна синхронизация</p>
             </div>
-            <button onclick="toggleCloudModal()" class="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5 backdrop-blur-sm">
-                <i class="fa-solid fa-cloud"></i> Облак настройки
+            <button onclick="forceReload()" class="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5 backdrop-blur-sm">
+                <i class="fa-solid fa-arrows-rotate"></i> Презареждане
             </button>
         </div>
 
         <!-- Status Bar -->
         <div id="statusBar" class="bg-amber-50 border-b border-amber-200 text-amber-800 text-xs px-4 py-2 flex justify-between items-center">
-            <span><i class="fa-solid fa-circle-info mr-1"></i> Статус: <strong id="statusText">Локален режим (Настройте облака)</strong></span>
-            <button onclick="syncData()" class="text-amber-900 hover:underline font-semibold flex items-center gap-1">
+            <span><i class="fa-solid fa-signal mr-1"></i> Статус: <strong id="statusText">Свързване с облака...</strong></span>
+            <button onclick="loadItems()" class="text-amber-900 hover:underline font-semibold flex items-center gap-1">
                 <i class="fa-solid fa-rotate"></i> Опресни
             </button>
+        </div>
+
+        <!-- Error Alert Bar -->
+        <div id="errorBar" class="hidden bg-red-100 border-b border-red-300 text-red-800 text-xs px-4 py-2">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i> <span id="errorText"></span>
         </div>
 
         <!-- Input Form -->
@@ -71,7 +76,7 @@
                         </select>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-2 text-sm">
+                <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-2 text-sm">
                     <i class="fa-solid fa-plus"></i> Добави / Добави към сумата
                 </button>
             </form>
@@ -104,115 +109,73 @@
         </div>
     </div>
 
-    <!-- Modal for Cloud Settings -->
-    <div id="cloudModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-cloud text-emerald-600"></i> Облачна синхронизация
-                </h3>
-                <button onclick="toggleCloudModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <p class="text-xs text-gray-600">Въведете вашите Supabase ключове за синхронизация между Mac и телефон.</p>
-
-            <div class="space-y-3 text-sm">
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Supabase URL</label>
-                    <input type="text" id="supabaseUrl" placeholder="https://xyz.supabase.co" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-xs">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Supabase Anon Key</label>
-                    <input type="password" id="supabaseKey" placeholder="eyJhbGciOi..." class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-xs">
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="toggleCloudModal()" class="px-4 py-2 text-xs text-gray-600 hover:bg-gray-100 rounded-lg">Отказ</button>
-                <button onclick="saveCloudSettings()" class="px-4 py-2 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Запази</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        let items = [];
-        let supabaseClient = null;
-        let activeItemId = null;
-        let activeMode = 'add'; // 'add' or 'subtract'
+        // Жёстко вшитые параметры Supabase
+        const SUPABASE_URL = "https://jsamkbbzibtleglnspzt.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_t3C01r8qU4B3X3F3P1G4yA_5a6b7c8d"; // Ваш publishable key из скрина
 
-        window.onload = function() {
-            initSupabase();
-            loadItems();
-            // Автоматическое обновление данных каждые 3 секунды
-            setInterval(syncData, 3000);
+        let supabaseClient = null;
+        let items = [];
+        let activeItemId = null;
+        let activeMode = 'add';
+
+        window.onload = async function() {
+            // Очищаем старый нерабочий кэш
+            localStorage.removeItem('veg_supabase_url');
+            localStorage.removeItem('veg_supabase_key');
+
+            try {
+                // Инициализация Supabase
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: { persistSession: false }
+                });
+
+                document.getElementById('statusText').innerText = "Облакът е свързан (Активен)";
+                document.getElementById('statusBar').className = "bg-emerald-50 border-b border-emerald-200 text-emerald-800 text-xs px-4 py-2 flex justify-between items-center";
+            } catch (err) {
+                showError("Грешка при връзка с Supabase: " + err.message);
+            }
+
+            await loadItems();
+
+            // Авто-обновление каждые 3 секунды
+            setInterval(loadItems, 3000);
         };
 
-        function cleanUrl(url) {
-            if (!url) return '';
-            return url.trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/, '');
-        }
-
-        function initSupabase() {
-            const rawUrl = localStorage.getItem('veg_supabase_url');
-            const key = localStorage.getItem('veg_supabase_key');
-            const url = cleanUrl(rawUrl);
-
-            if (url && key) {
-                document.getElementById('supabaseUrl').value = url;
-                document.getElementById('supabaseKey').value = key;
-                try {
-                    supabaseClient = supabase.createClient(url, key);
-                    document.getElementById('statusText').innerText = "Облачна синхронизация активна";
-                    document.getElementById('statusBar').className = "bg-emerald-50 border-b border-emerald-200 text-emerald-800 text-xs px-4 py-2 flex justify-between items-center";
-                } catch (e) {
-                    console.error("Supabase Init Error", e);
-                }
+        function showError(msg) {
+            const errorBar = document.getElementById('errorBar');
+            const errorText = document.getElementById('errorText');
+            if (msg) {
+                errorText.innerText = msg;
+                errorBar.classList.remove('hidden');
+            } else {
+                errorBar.classList.add('hidden');
             }
         }
 
-        function saveCloudSettings() {
-            const rawUrl = document.getElementById('supabaseUrl').value;
-            const key = document.getElementById('supabaseKey').value.trim();
-            const url = cleanUrl(rawUrl);
-
-            localStorage.setItem('veg_supabase_url', url);
-            localStorage.setItem('veg_supabase_key', key);
-
-            toggleCloudModal();
-            initSupabase();
-            syncData();
-        }
-
-        function toggleCloudModal() {
-            const modal = document.getElementById('cloudModal');
-            modal.classList.toggle('hidden');
+        function forceReload() {
+            window.location.reload(true);
         }
 
         async function loadItems() {
-            if (supabaseClient) {
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('veg_items')
-                        .select('*')
-                        .order('created_at', { ascending: false });
+            if (!supabaseClient) return;
 
-                    if (!error && data) {
-                        items = data;
-                        saveLocal();
-                        renderList();
-                        return;
-                    }
-                } catch (e) {
-                    console.error("Fetch error:", e);
+            try {
+                const { data, error } = await supabaseClient
+                    .from('veg_items')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    showError("Грешка при зареждане: " + error.message);
+                } else if (data) {
+                    showError(null);
+                    items = data;
+                    renderList();
                 }
+            } catch (err) {
+                showError("Срещнат проблем: " + err.message);
             }
-            const localData = localStorage.getItem('veg_items_local');
-            items = localData ? JSON.parse(localData) : [];
-            renderList();
-        }
-
-        function saveLocal() {
-            localStorage.setItem('veg_items_local', JSON.stringify(items));
         }
 
         async function handleFormSubmit(e) {
@@ -225,17 +188,21 @@
             const qty = parseFloat(qtyInput.value);
             const unit = unitInput.value;
 
-            // Сначала обновляем локальный массив
-            const existingIndex = items.findIndex(item => item.name.toLowerCase() === name && item.unit === unit);
+            if (!name || isNaN(qty)) return;
 
-            if (existingIndex !== -1) {
-                const updatedQty = parseFloat((items[existingIndex].qty + qty).toFixed(2));
-                items[existingIndex].qty = updatedQty;
-                items[existingIndex].created_at = new Date().toISOString();
-                
-                if (supabaseClient) {
-                    await supabaseClient.from('veg_items').update({ qty: updatedQty, created_at: items[existingIndex].created_at }).eq('id', items[existingIndex].id);
-                }
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+
+            const existingItem = items.find(item => item.name.toLowerCase() === name && item.unit === unit);
+
+            if (existingItem) {
+                const newQty = parseFloat((existingItem.qty + qty).toFixed(2));
+                const { error } = await supabaseClient
+                    .from('veg_items')
+                    .update({ qty: newQty, created_at: new Date().toISOString() })
+                    .eq('id', existingItem.id);
+
+                if (error) showError("Грешка при дублиране: " + error.message);
             } else {
                 const newItem = {
                     id: Date.now().toString(),
@@ -244,19 +211,19 @@
                     unit: unit,
                     created_at: new Date().toISOString()
                 };
-                items.unshift(newItem);
+                const { error } = await supabaseClient
+                    .from('veg_items')
+                    .insert([newItem]);
 
-                if (supabaseClient) {
-                    await supabaseClient.from('veg_items').insert([newItem]);
-                }
+                if (error) showError("Грешка при запис: " + error.message);
             }
 
-            saveLocal();
-            renderList();
-
+            submitBtn.disabled = false;
             nameInput.value = '';
             qtyInput.value = '';
             nameInput.focus();
+
+            await loadItems();
         }
 
         function openQuickModal(id, mode) {
@@ -265,20 +232,8 @@
             activeItemId = id;
             activeMode = mode;
 
-            const modalTitle = document.getElementById('quickModalTitle');
-            const modalSubtitle = document.getElementById('quickModalSubtitle');
-            const submitBtn = document.getElementById('quickModalSubmitBtn');
-
-            if (mode === 'add') {
-                modalTitle.innerText = "Прибави количество (+)";
-                modalSubtitle.innerText = `Прибавяне към: ${item.name} (${item.unit})`;
-                submitBtn.className = "px-4 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700";
-            } else {
-                modalTitle.innerText = "Извади количество (-)";
-                modalSubtitle.innerText = `Изваждане от: ${item.name} (${item.unit})`;
-                submitBtn.className = "px-4 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700";
-            }
-
+            document.getElementById('quickModalTitle').innerText = mode === 'add' ? "Прибави (+)" : "Извади (-)";
+            document.getElementById('quickModalSubtitle').innerText = `${item.name} (${item.unit})`;
             document.getElementById('quickModalQty').value = '';
             document.getElementById('quickModal').classList.remove('hidden');
             document.getElementById('quickModalQty').focus();
@@ -295,35 +250,23 @@
 
             const item = items.find(i => i.id === activeItemId);
             if (item) {
-                let newQty = item.qty;
-                if (activeMode === 'add') {
-                    newQty = parseFloat((item.qty + val).toFixed(2));
-                } else {
-                    newQty = parseFloat((item.qty - val).toFixed(2));
-                }
+                let newQty = activeMode === 'add' ? item.qty + val : item.qty - val;
+                newQty = parseFloat(newQty.toFixed(2));
 
                 if (newQty <= 0) {
                     await deleteItem(item.id);
                 } else {
-                    item.qty = newQty;
-                    saveLocal();
-                    renderList();
-                    if (supabaseClient) {
-                        await supabaseClient.from('veg_items').update({ qty: newQty }).eq('id', item.id);
-                    }
+                    await supabaseClient.from('veg_items').update({ qty: newQty }).eq('id', item.id);
                 }
             }
             closeQuickModal();
+            await loadItems();
         }
 
         async function deleteItem(id) {
-            items = items.filter(i => i.id !== id);
-            saveLocal();
-            renderList();
-
-            if (supabaseClient) {
-                await supabaseClient.from('veg_items').delete().eq('id', id);
-            }
+            const { error } = await supabaseClient.from('veg_items').delete().eq('id', id);
+            if (error) showError("Грешка при изтриване: " + error.message);
+            await loadItems();
         }
 
         function renderList() {
@@ -334,7 +277,7 @@
             itemCount.innerText = `${items.length} позиции`;
 
             if (items.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm">Няма намерени записи.</div>`;
+                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm">Няма намерени записи в облака.</div>`;
                 return;
             }
 
@@ -359,23 +302,19 @@
                             <span class="font-bold text-gray-800 text-base">${item.qty}</span>
                             <span class="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium">${item.unit}</span>
                         </div>
-                        <button onclick="openQuickModal('${item.id}', 'add')" title="Прибави (+)" class="w-7 h-7 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center transition">
+                        <button onclick="openQuickModal('${item.id}', 'add')" class="w-7 h-7 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-plus text-xs"></i>
                         </button>
-                        <button onclick="openQuickModal('${item.id}', 'subtract')" title="Извади (-)" class="w-7 h-7 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center transition">
+                        <button onclick="openQuickModal('${item.id}', 'subtract')" class="w-7 h-7 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-minus text-xs"></i>
                         </button>
-                        <button onclick="deleteItem('${item.id}')" title="Изтрий" class="w-7 h-7 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition">
+                        <button onclick="deleteItem('${item.id}')" class="w-7 h-7 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
                 `;
                 container.appendChild(card);
             });
-        }
-
-        async function syncData() {
-            await loadItems();
         }
     </script>
 </body>
