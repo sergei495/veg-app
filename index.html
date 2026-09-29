@@ -161,7 +161,6 @@
             const unitInput = document.getElementById('productUnit');
             const addForm = document.getElementById('addForm');
 
-            // Переход по Enter: Название -> Количество -> Тара
             nameInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -179,7 +178,6 @@
             unitInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    // Отправляем форму только когда нажали Enter в Таре
                     addForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                 }
             });
@@ -314,12 +312,19 @@
 
             if (!name || isNaN(qty)) return;
 
-            const existingItem = items.find(item => item.name.toLowerCase() === name && item.unit === unit && (item.type || 'warehouse') === type);
+            // Ищем совпадение ТОЛЬКО по названию (без жесткой привязки к таре)
+            const existingItem = items.find(item => item.name.toLowerCase() === name);
 
             if (supabaseClient) {
                 if (existingItem) {
                     const newQty = parseFloat((existingItem.qty + qty).toFixed(2));
-                    await supabaseClient.from('veg_items').update({ qty: newQty, created_at: new Date().toISOString() }).eq('id', existingItem.id);
+                    // Обновляем количество, время, а также при необходимости обновляем тару и тип
+                    await supabaseClient.from('veg_items').update({ 
+                        qty: newQty, 
+                        unit: unit,
+                        type: type,
+                        created_at: new Date().toISOString() 
+                    }).eq('id', existingItem.id);
                 } else {
                     const newItem = { id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, is_ordered: false, created_at: new Date().toISOString() };
                     await supabaseClient.from('veg_items').insert([newItem]);
@@ -327,6 +332,8 @@
             } else {
                 if (existingItem) {
                     existingItem.qty = parseFloat((existingItem.qty + qty).toFixed(2));
+                    existingItem.unit = unit;
+                    existingItem.type = type;
                     existingItem.created_at = new Date().toISOString();
                 } else {
                     items.unshift({ id: Date.now().toString(), name: name, qty: qty, unit: unit, type: type, is_ordered: false, created_at: new Date().toISOString() });
@@ -336,7 +343,7 @@
 
             nameInput.value = '';
             qtyInput.value = '';
-            nameInput.focus(); // Возвращаем фокус на название продукта
+            nameInput.focus();
             await loadItems();
         }
 
