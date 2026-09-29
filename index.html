@@ -158,11 +158,29 @@
         function setupKeyboardNavigation() {
             const nameInput = document.getElementById('productName');
             const qtyInput = document.getElementById('productQty');
+            const unitInput = document.getElementById('productUnit');
+            const addForm = document.getElementById('addForm');
 
+            // Переход по Enter: Название -> Количество -> Тара
             nameInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     qtyInput.focus();
+                }
+            });
+
+            qtyInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    unitInput.focus();
+                }
+            });
+
+            unitInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // Отправляем форму только когда нажали Enter в Таре
+                    addForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                 }
             });
 
@@ -318,7 +336,7 @@
 
             nameInput.value = '';
             qtyInput.value = '';
-            nameInput.focus();
+            nameInput.focus(); // Возвращаем фокус на название продукта
             await loadItems();
         }
 
@@ -398,7 +416,6 @@
             const item = items.find(i => i.id === id);
             const itemName = item ? item.name : 'тази позиция';
 
-            // Подтверждение перед удалением
             const confirmed = confirm(`Сигурни ли сте, че искате да изтриете "${itemName}"?`);
             if (!confirmed) return;
 
