@@ -96,9 +96,9 @@
             </form>
         </div>
 
-        <!-- Detailed List -->
-        <div class="p-4 md:p-6">
-            <div class="flex justify-between items-center mb-4">
+        <!-- Detailed List Header & Filters -->
+        <div class="p-4 md:p-6 pb-2 border-b border-gray-100 bg-white">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
                 <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Списък по записи</h2>
                 <div class="flex items-center gap-2">
                     <span id="itemCount" class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">0 позиции</span>
@@ -108,6 +108,17 @@
                 </div>
             </div>
 
+            <!-- Controls: Hide Ordered Toggle -->
+            <div class="flex items-center justify-between text-xs pt-1">
+                <label class="flex items-center gap-2 cursor-pointer select-none text-gray-600 font-medium">
+                    <input type="checkbox" id="hideOrderedToggle" onchange="renderList()" class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+                    <span>Скрии поръчаните (покажи само ❌)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Detailed List Body -->
+        <div class="p-4 md:p-6 pt-3">
             <div id="itemsList" class="space-y-2">
                 <!-- Items list rendered here -->
             </div>
@@ -160,7 +171,10 @@
         let selectedIndex = -1;
         let activeSuggestionIndex = -1;
 
-        // Популярный список овощей/фруктов для подсказок
+        // Память последней тары для продуктов
+        let unitMemory = JSON.parse(localStorage.getItem('veg_unit_memory') || '{}');
+
+        // Пресет продуктов
         const presetProducts = [
             "домат", "краставица", "картоф", "лук", "чесън", "морков", "пипер", "чушка", "патладжан", 
             "тиквичка", "зеле", "карфиол", "броколи", "спанак", "салата", "магданоз", "копър", "гъби", 
@@ -177,6 +191,7 @@
 
         function setupAutocomplete() {
             const nameInput = document.getElementById('productName');
+            const unitInput = document.getElementById('productUnit');
             const box = document.getElementById('suggestionsBox');
 
             nameInput.addEventListener('input', function() {
@@ -186,7 +201,11 @@
                     return;
                 }
 
-                // Объединяем позиции из текущего списка и пресета
+                // Если для введенного слова есть сохраненная тара — выбираем её
+                if (unitMemory[val]) {
+                    unitInput.value = unitMemory[val];
+                }
+
                 const allNames = Array.from(new Set([...items.map(i => i.name.toLowerCase()), ...presetProducts]));
                 const matches = allNames.filter(n => n.startsWith(val));
 
@@ -217,9 +236,21 @@
         function selectSuggestion(name) {
             const nameInput = document.getElementById('productName');
             const qtyInput = document.getElementById('productQty');
+            const unitInput = document.getElementById('productUnit');
             const box = document.getElementById('suggestionsBox');
 
             nameInput.value = name;
+
+            // Если продукт был в сохраненной памяти — ставим его тару
+            const cleanName = name.trim().toLowerCase();
+            if (unitMemory[cleanName]) {
+                unitInput.value = unitMemory[cleanName];
+            } else {
+                // Если не было в памяти, но уже есть в активном списке — берем его тару
+                const found = items.find(i => i.name.toLowerCase() === cleanName);
+                if (found && found.unit) unitInput.value = found.unit;
+            }
+
             box.classList.add('hidden');
             qtyInput.focus();
         }
@@ -298,28 +329,29 @@
                 const isInputFocused = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName);
 
                 if (!isInputFocused) {
+                    const visibleItems = getFilteredItems();
                     if (e.key === 'ArrowDown') {
                         e.preventDefault();
-                        if (items.length === 0) return;
-                        selectedIndex = (selectedIndex + 1) % items.length;
+                        if (visibleItems.length === 0) return;
+                        selectedIndex = (selectedIndex + 1) % visibleItems.length;
                         renderList();
                     } else if (e.key === 'ArrowUp') {
                         e.preventDefault();
-                        if (items.length === 0) return;
-                        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                        if (visibleItems.length === 0) return;
+                        selectedIndex = (selectedIndex - 1 + visibleItems.length) % visibleItems.length;
                         renderList();
-                    } else if (e.key === ' ' && selectedIndex >= 0 && selectedIndex < items.length) {
+                    } else if (e.key === ' ' && selectedIndex >= 0 && selectedIndex < visibleItems.length) {
                         e.preventDefault();
-                        toggleItemOrdered(items[selectedIndex].id);
-                    } else if ((e.key === '+' || e.key === '=') && selectedIndex >= 0 && selectedIndex < items.length) {
+                        toggleItemOrdered(visibleItems[selectedIndex].id);
+                    } else if ((e.key === '+' || e.key === '=') && selectedIndex >= 0 && selectedIndex < visibleItems.length) {
                         e.preventDefault();
-                        openQuickModal(items[selectedIndex].id, 'add');
-                    } else if ((e.key === '-' || e.key === '_') && selectedIndex >= 0 && selectedIndex < items.length) {
+                        openQuickModal(visibleItems[selectedIndex].id, 'add');
+                    } else if ((e.key === '-' || e.key === '_') && selectedIndex >= 0 && selectedIndex < visibleItems.length) {
                         e.preventDefault();
-                        openQuickModal(items[selectedIndex].id, 'subtract');
-                    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIndex >= 0 && selectedIndex < items.length) {
+                        openQuickModal(visibleItems[selectedIndex].id, 'subtract');
+                    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIndex >= 0 && selectedIndex < visibleItems.length) {
                         e.preventDefault();
-                        deleteItem(items[selectedIndex].id);
+                        deleteItem(visibleItems[selectedIndex].id);
                     }
                 }
             });
@@ -418,6 +450,10 @@
             const unit = unitInput.value;
 
             if (!name || isNaN(qty)) return;
+
+            // Запоминаем тару для этого наименования
+            unitMemory[name] = unit;
+            localStorage.setItem('veg_unit_memory', JSON.stringify(unitMemory));
 
             document.getElementById('suggestionsBox').classList.add('hidden');
 
@@ -541,7 +577,8 @@
                 items = items.filter(i => i.id !== id);
                 localStorage.setItem('veg_local_items', JSON.stringify(items));
             }
-            if (selectedIndex >= items.length) selectedIndex = items.length - 1;
+            const filtered = getFilteredItems();
+            if (selectedIndex >= filtered.length) selectedIndex = filtered.length - 1;
             await loadItems();
         }
 
@@ -561,19 +598,30 @@
             await loadItems();
         }
 
+        function getFilteredItems() {
+            const hideOrdered = document.getElementById('hideOrderedToggle') ? document.getElementById('hideOrderedToggle').checked : false;
+
+            return items.filter(item => {
+                if (hideOrdered && item.is_ordered) return false;
+                return true;
+            });
+        }
+
         function renderList() {
             const container = document.getElementById('itemsList');
             const itemCount = document.getElementById('itemCount');
 
-            container.innerHTML = '';
-            itemCount.innerText = `${items.length} позиции`;
+            const filteredItems = getFilteredItems();
 
-            if (items.length === 0) {
+            container.innerHTML = '';
+            itemCount.innerText = `${filteredItems.length} от ${items.length} позиции`;
+
+            if (filteredItems.length === 0) {
                 container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm">Няма намерени записи.</div>`;
                 return;
             }
 
-            items.forEach((item, index) => {
+            filteredItems.forEach((item, index) => {
                 const card = document.createElement('div');
                 const isSelected = index === selectedIndex;
                 card.className = `bg-white p-3 rounded-xl border transition flex items-center justify-between ${
