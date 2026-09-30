@@ -21,6 +21,10 @@
             border-color: #10b981 !important;
             background-color: #f0fdf4 !important;
         }
+        .suggestion-item.active {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
     </style>
 </head>
 <body class="p-3 md:p-6 text-gray-800 min-h-screen flex flex-col items-center">
@@ -60,10 +64,12 @@
                             <option value="drive">🚚 Ехать</option>
                         </select>
                     </div>
-                    <div class="md:col-span-5">
+                    <div class="md:col-span-5 relative">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Продукт (напр. Гъби)</label>
-                        <input type="text" id="productName" required placeholder="Продукт / Стока" 
+                        <input type="text" id="productName" required autocomplete="off" placeholder="Продукт / Стока" 
                             class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                        <!-- Suggestions Dropdown -->
+                        <div id="suggestionsBox" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto"></div>
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Количество</label>
@@ -94,7 +100,12 @@
         <div class="p-4 md:p-6">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Списък по записи</h2>
-                <span id="itemCount" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">0 позиции</span>
+                <div class="flex items-center gap-2">
+                    <span id="itemCount" class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">0 позиции</span>
+                    <button onclick="clearAllItems()" title="Изтрий всички позиции от списъка" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-2.5 py-1 rounded-full font-medium transition flex items-center gap-1 border border-red-200">
+                        <i class="fa-solid fa-trash-can"></i> Изчисти всичко
+                    </button>
+                </div>
             </div>
 
             <div id="itemsList" class="space-y-2">
@@ -147,23 +158,108 @@
         let activeItemId = null;
         let activeMode = 'add';
         let selectedIndex = -1;
+        let activeSuggestionIndex = -1;
+
+        // Популярный список овощей/фруктов для подсказок
+        const presetProducts = [
+            "домат", "краставица", "картоф", "лук", "чесън", "морков", "пипер", "чушка", "патладжан", 
+            "тиквичка", "зеле", "карфиол", "броколи", "спанак", "салата", "магданоз", "копър", "гъби", 
+            "лимон", "портокал", "ябълка", "банан", "грозде", "ягода", "малина", "диня", "пъпеш"
+        ];
 
         window.onload = function() {
             initSupabase();
             loadItems();
             setInterval(loadItems, 3000);
             setupKeyboardNavigation();
+            setupAutocomplete();
         };
+
+        function setupAutocomplete() {
+            const nameInput = document.getElementById('productName');
+            const box = document.getElementById('suggestionsBox');
+
+            nameInput.addEventListener('input', function() {
+                const val = this.value.trim().toLowerCase();
+                if (!val) {
+                    box.classList.add('hidden');
+                    return;
+                }
+
+                // Объединяем позиции из текущего списка и пресета
+                const allNames = Array.from(new Set([...items.map(i => i.name.toLowerCase()), ...presetProducts]));
+                const matches = allNames.filter(n => n.startsWith(val));
+
+                if (matches.length === 0) {
+                    box.classList.add('hidden');
+                    return;
+                }
+
+                activeSuggestionIndex = -1;
+                box.innerHTML = '';
+                matches.forEach((m, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item px-3 py-2 text-sm capitalize cursor-pointer hover:bg-emerald-50 text-gray-700';
+                    div.innerText = m;
+                    div.onclick = () => selectSuggestion(m);
+                    box.appendChild(div);
+                });
+                box.classList.remove('hidden');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!nameInput.contains(e.target) && !box.contains(e.target)) {
+                    box.classList.add('hidden');
+                }
+            });
+        }
+
+        function selectSuggestion(name) {
+            const nameInput = document.getElementById('productName');
+            const qtyInput = document.getElementById('productQty');
+            const box = document.getElementById('suggestionsBox');
+
+            nameInput.value = name;
+            box.classList.add('hidden');
+            qtyInput.focus();
+        }
 
         function setupKeyboardNavigation() {
             const nameInput = document.getElementById('productName');
             const qtyInput = document.getElementById('productQty');
             const unitInput = document.getElementById('productUnit');
             const addForm = document.getElementById('addForm');
+            const box = document.getElementById('suggestionsBox');
 
             nameInput.addEventListener('keydown', function(e) {
+                const suggestions = box.querySelectorAll('.suggestion-item');
+                const isOpen = !box.classList.contains('hidden') && suggestions.length > 0;
+
+                if (isOpen) {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        activeSuggestionIndex = (activeSuggestionIndex + 1) % suggestions.length;
+                        updateSuggestionHighlight(suggestions);
+                        return;
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        activeSuggestionIndex = (activeSuggestionIndex - 1 + suggestions.length) % suggestions.length;
+                        updateSuggestionHighlight(suggestions);
+                        return;
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (activeSuggestionIndex >= 0 && activeSuggestionIndex < suggestions.length) {
+                            selectSuggestion(suggestions[activeSuggestionIndex].innerText);
+                        } else {
+                            selectSuggestion(suggestions[0].innerText);
+                        }
+                        return;
+                    }
+                }
+
                 if (e.key === 'Enter') {
                     e.preventDefault();
+                    box.classList.add('hidden');
                     qtyInput.focus();
                 }
             });
@@ -225,6 +321,17 @@
                         e.preventDefault();
                         deleteItem(items[selectedIndex].id);
                     }
+                }
+            });
+        }
+
+        function updateSuggestionHighlight(suggestions) {
+            suggestions.forEach((item, idx) => {
+                if (idx === activeSuggestionIndex) {
+                    item.classList.add('active');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('active');
                 }
             });
         }
@@ -312,13 +419,13 @@
 
             if (!name || isNaN(qty)) return;
 
-            // Ищем совпадение ТОЛЬКО по названию (без жесткой привязки к таре)
+            document.getElementById('suggestionsBox').classList.add('hidden');
+
             const existingItem = items.find(item => item.name.toLowerCase() === name);
 
             if (supabaseClient) {
                 if (existingItem) {
                     const newQty = parseFloat((existingItem.qty + qty).toFixed(2));
-                    // Обновляем количество, время, а также при необходимости обновляем тару и тип
                     await supabaseClient.from('veg_items').update({ 
                         qty: newQty, 
                         unit: unit,
@@ -405,7 +512,7 @@
                 newQty = parseFloat(newQty.toFixed(2));
 
                 if (newQty <= 0) {
-                    await deleteItem(item.id);
+                    await deleteItem(item.id, true);
                 } else {
                     if (supabaseClient) {
                         await supabaseClient.from('veg_items').update({ qty: newQty }).eq('id', item.id);
@@ -419,12 +526,14 @@
             await loadItems();
         }
 
-        async function deleteItem(id) {
+        async function deleteItem(id, skipConfirm = false) {
             const item = items.find(i => i.id === id);
             const itemName = item ? item.name : 'тази позиция';
 
-            const confirmed = confirm(`Сигурни ли сте, че искате да изтриете "${itemName}"?`);
-            if (!confirmed) return;
+            if (!skipConfirm) {
+                const confirmed = confirm(`Сигурни ли сте, че искате да изтриете "${itemName}"?`);
+                if (!confirmed) return;
+            }
 
             if (supabaseClient) {
                 await supabaseClient.from('veg_items').delete().eq('id', id);
@@ -433,6 +542,22 @@
                 localStorage.setItem('veg_local_items', JSON.stringify(items));
             }
             if (selectedIndex >= items.length) selectedIndex = items.length - 1;
+            await loadItems();
+        }
+
+        async function clearAllItems() {
+            if (items.length === 0) return;
+
+            const confirmed = confirm(`Сигурни ли сте, че искате да изтриете ВСИЧКИ ${items.length} позиции от списъка?`);
+            if (!confirmed) return;
+
+            if (supabaseClient) {
+                await supabaseClient.from('veg_items').delete().neq('id', '0');
+            } else {
+                items = [];
+                localStorage.setItem('veg_local_items', JSON.stringify([]));
+            }
+            selectedIndex = -1;
             await loadItems();
         }
 
