@@ -136,7 +136,7 @@
         <div class="bg-white rounded-2xl max-w-4xl w-full p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
-                    <i class="fa-solid fa-tags text-amber-500"></i> База цени на доставчици (лв/кг)
+                    <i class="fa-solid fa-tags text-amber-500"></i> База цени на доставчици (€/кг)
                 </h3>
                 <div class="flex items-center gap-2">
                     <button onclick="loadSupplierPrices()" title="Презареди цените от базата" class="text-xs text-amber-600 hover:text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200">
@@ -403,10 +403,8 @@
             if (!supplierPrices[cleanProd]) supplierPrices[cleanProd] = {};
             supplierPrices[cleanProd][supplierName] = priceNum;
 
-            // Железно сохраняем локально на устройстве
             localStorage.setItem('veg_supplier_prices', JSON.stringify(supplierPrices));
 
-            // Пробуем отправить в Supabase
             if (supabaseClient) {
                 try {
                     const recordId = `${cleanProd}_${supplierName}`;
@@ -955,7 +953,7 @@
                 const bestPriceInfo = getBestPriceInfo(item.name);
                 const bestPriceBadgeHtml = bestPriceInfo 
                     ? `<div class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-medium inline-flex items-center gap-1 mt-0.5">
-                        <i class="fa-solid fa-tag text-[9px]"></i> <strong>${bestPriceInfo.suppliers}</strong>: ${bestPriceInfo.price} лв/кг
+                        <i class="fa-solid fa-tag text-[9px]"></i> <strong>${bestPriceInfo.suppliers}</strong>: ${bestPriceInfo.price} €/кг
                        </div>`
                     : '';
 
