@@ -133,7 +133,7 @@
 
     <!-- Modal Supplier Prices -->
     <div id="pricesModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-3xl w-full p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+        <div class="bg-white rounded-2xl max-w-4xl w-full p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
                     <i class="fa-solid fa-tags text-amber-500"></i> База цени на доставчици (лв/кг)
@@ -153,6 +153,14 @@
                 </div>
             </div>
 
+            <!-- Add Custom Product to Price Catalog -->
+            <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-gray-200">
+                <input type="text" id="newCatalogProductInput" placeholder="Добави нов продукт в ценовия списък (напр. домат)" class="flex-1 px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <button onclick="addCatalogProduct()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 shrink-0">
+                    <i class="fa-solid fa-plus"></i> Добави в цените
+                </button>
+            </div>
+
             <!-- Prices Table -->
             <div class="overflow-y-auto flex-1 border border-gray-200 rounded-xl">
                 <table class="w-full text-left text-xs border-collapse">
@@ -164,16 +172,17 @@
                             <th class="p-2.5 font-semibold text-center" id="thSup3">Доставчик 3</th>
                             <th class="p-2.5 font-semibold text-center" id="thSup4">Доставчик 4</th>
                             <th class="p-2.5 font-semibold text-center" id="thSup5">Доставчик 5</th>
+                            <th class="p-2.5 font-semibold text-center w-12"></th>
                         </tr>
                     </thead>
                     <tbody id="pricesTableBody" class="divide-y divide-gray-100">
-                        <!-- Rendered rows -->
+                        <!-- Rendered custom ordered rows -->
                     </tbody>
                 </table>
             </div>
 
             <div class="flex justify-between items-center pt-2 border-t">
-                <span class="text-[11px] text-gray-400">* Цените са в лева за 1 кг. Промените се запазват автоматично.</span>
+                <span class="text-[11px] text-gray-400">* Цените са в лв/кг. Редът на продуктите се запазва както го подредите.</span>
                 <button onclick="closePricesModal()" class="px-4 py-1.5 text-xs bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Готово</button>
             </div>
         </div>
@@ -221,6 +230,7 @@
         let items = [];
         let supplierPrices = {};
         let suppliers = ["Доставчик 1", "Доставчик 2", "Доставчик 3", "Доставчик 4", "Доставчик 5"];
+        let customPriceCatalog = JSON.parse(localStorage.getItem('veg_price_catalog') || '[]');
 
         let activeItemId = null;
         let activeMode = 'add';
@@ -260,7 +270,7 @@
             }
             document.getElementById('sup1Name').value = suppliers[0] || "Доставчик 1";
             document.getElementById('sup2Name').value = suppliers[1] || "Доставчик 2";
-            document.getElementById('sup3Name').value = suppliers[2] || "Доставчик 3";
+            document.getElementById('sup3Name').value = suppliers[3] || "Доставчик 3";
             document.getElementById('sup4Name').value = suppliers[3] || "Доставчик 4";
             document.getElementById('sup5Name').value = suppliers[4] || "Доставчик 5";
             updateSupplierTableHeader();
@@ -293,6 +303,37 @@
 
         function closePricesModal() {
             document.getElementById('pricesModal').classList.add('hidden');
+        }
+
+        function addCatalogProduct() {
+            const input = document.getElementById('newCatalogProductInput');
+            const val = input.value.trim().toLowerCase();
+            if (!val) return;
+
+            if (!customPriceCatalog.includes(val)) {
+                customPriceCatalog.push(val);
+                localStorage.setItem('veg_price_catalog', JSON.stringify(customPriceCatalog));
+            }
+            input.value = '';
+            renderPricesTable();
+        }
+
+        function removeCatalogProduct(prodName) {
+            customPriceCatalog = customPriceCatalog.filter(p => p !== prodName);
+            localStorage.setItem('veg_price_catalog', JSON.stringify(customPriceCatalog));
+            renderPricesTable();
+        }
+
+        function moveCatalogProduct(index, direction) {
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= customPriceCatalog.length) return;
+
+            const temp = customPriceCatalog[index];
+            customPriceCatalog[index] = customPriceCatalog[targetIndex];
+            customPriceCatalog[targetIndex] = temp;
+
+            localStorage.setItem('veg_price_catalog', JSON.stringify(customPriceCatalog));
+            renderPricesTable();
         }
 
         async function loadSupplierPrices() {
@@ -340,17 +381,34 @@
             const tbody = document.getElementById('pricesTableBody');
             tbody.innerHTML = '';
 
-            const allProducts = Array.from(new Set([
-                ...items.map(i => i.name.toLowerCase()),
-                ...presetProducts,
-                ...Object.keys(supplierPrices)
-            ])).sort();
+            // Собираем полный список каталога в порядке пользователя
+            let catalogList = [...customPriceCatalog];
 
-            allProducts.forEach(prod => {
+            // Добавляем отсутствующие продукты из текущего списка, если пользователь их ещё не добавил в каталог вручную
+            items.forEach(item => {
+                const name = item.name.toLowerCase();
+                if (!catalogList.includes(name)) {
+                    catalogList.push(name);
+                }
+            });
+
+            if (catalogList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400">Няма добавени продукти в ценовия каталог. Напишете продукт отгоре и натиснете "Добави в цените".</td></tr>`;
+                return;
+            }
+
+            catalogList.forEach((prod, index) => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50";
 
-                let cellsHtml = `<td class="p-2.5 font-medium text-gray-800 capitalize">${prod}</td>`;
+                let cellsHtml = `
+                    <td class="p-2.5 font-medium text-gray-800 capitalize flex items-center justify-between gap-1">
+                        <span>${prod}</span>
+                        <div class="flex items-center gap-1 shrink-0 text-gray-400">
+                            <button onclick="moveCatalogProduct(${index}, -1)" title="Премести нагоре" class="hover:text-emerald-600 px-1"><i class="fa-solid fa-arrow-up text-[10px]"></i></button>
+                            <button onclick="moveCatalogProduct(${index}, 1)" title="Премести надолу" class="hover:text-emerald-600 px-1"><i class="fa-solid fa-arrow-down text-[10px]"></i></button>
+                        </div>
+                    </td>`;
                 
                 suppliers.forEach(sup => {
                     const price = (supplierPrices[prod] && supplierPrices[prod][sup]) ? supplierPrices[prod][sup] : '';
@@ -362,6 +420,13 @@
                         </td>
                     `;
                 });
+
+                cellsHtml += `
+                    <td class="p-1.5 text-center">
+                        <button onclick="removeCatalogProduct('${prod}')" title="Премахни от ценовия каталог" class="text-red-400 hover:text-red-600 p-1">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </td>`;
 
                 tr.innerHTML = cellsHtml;
                 tbody.appendChild(tr);
@@ -411,7 +476,7 @@
                     unitInput.value = unitMemory[val];
                 }
 
-                const allNames = Array.from(new Set([...items.map(i => i.name.toLowerCase()), ...presetProducts]));
+                const allNames = Array.from(new Set([...customPriceCatalog, ...items.map(i => i.name.toLowerCase()), ...presetProducts]));
                 const matches = allNames.filter(n => n.startsWith(val));
 
                 if (matches.length === 0) {
