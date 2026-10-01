@@ -182,7 +182,7 @@
             </div>
 
             <div class="flex justify-between items-center pt-2 border-t">
-                <span class="text-[11px] text-gray-400">* Натиснете "-" за прочерк (ако доставчикът не предлага стоката).</span>
+                <span class="text-[11px] text-gray-400">* Натиснете "-" за прочерк (ако не предлага стоката).</span>
                 <button onclick="closePricesModal()" class="px-4 py-1.5 text-xs bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Готово</button>
             </div>
         </div>
@@ -229,7 +229,7 @@
         let supabaseClient = null;
         let items = [];
         let supplierPrices = {};
-        let suppliers = ["Доставчик 1", "Доставчик 2", "Доставчик 3", "Доставчик 4", "Доставчик 5"];
+        let suppliers = ["Катя", "Нина", "Човека-плод", "Руснака", "Косьо"];
         let customPriceCatalog = JSON.parse(localStorage.getItem('veg_price_catalog') || '[]');
 
         let activeItemId = null;
@@ -252,7 +252,9 @@
             loadSupplierPrices();
             setInterval(() => {
                 loadItems();
-                loadSupplierPrices();
+                if (document.getElementById('pricesModal').classList.contains('hidden')) {
+                    loadSupplierPrices();
+                }
             }, 3000);
             setupKeyboardNavigation();
             setupAutocomplete();
@@ -268,20 +270,20 @@
                     suppliers.push(`Доставчик ${suppliers.length + 1}`);
                 }
             }
-            document.getElementById('sup1Name').value = suppliers[0] || "Доставчик 1";
-            document.getElementById('sup2Name').value = suppliers[1] || "Доставчик 2";
-            document.getElementById('sup3Name').value = suppliers[2] || "Доставчик 3";
-            document.getElementById('sup4Name').value = suppliers[3] || "Доставчик 4";
-            document.getElementById('sup5Name').value = suppliers[4] || "Доставчик 5";
+            document.getElementById('sup1Name').value = suppliers[0] || "Катя";
+            document.getElementById('sup2Name').value = suppliers[1] || "Нина";
+            document.getElementById('sup3Name').value = suppliers[2] || "Човека-плод";
+            document.getElementById('sup4Name').value = suppliers[3] || "Руснака";
+            document.getElementById('sup5Name').value = suppliers[4] || "Косьо";
             updateSupplierTableHeader();
         }
 
         function updateSupplierNames() {
-            suppliers[0] = document.getElementById('sup1Name').value.trim() || "Доставчик 1";
-            suppliers[1] = document.getElementById('sup2Name').value.trim() || "Доставчик 2";
-            suppliers[2] = document.getElementById('sup3Name').value.trim() || "Доставчик 3";
-            suppliers[3] = document.getElementById('sup4Name').value.trim() || "Доставчик 4";
-            suppliers[4] = document.getElementById('sup5Name').value.trim() || "Доставчик 5";
+            suppliers[0] = document.getElementById('sup1Name').value.trim() || "Катя";
+            suppliers[1] = document.getElementById('sup2Name').value.trim() || "Нина";
+            suppliers[2] = document.getElementById('sup3Name').value.trim() || "Човека-плод";
+            suppliers[3] = document.getElementById('sup4Name').value.trim() || "Руснака";
+            suppliers[4] = document.getElementById('sup5Name').value.trim() || "Косьо";
             localStorage.setItem('veg_supplier_names', JSON.stringify(suppliers));
             updateSupplierTableHeader();
             renderPricesTable();
@@ -303,6 +305,7 @@
 
         function closePricesModal() {
             document.getElementById('pricesModal').classList.add('hidden');
+            renderList();
         }
 
         function addCatalogProduct() {
@@ -344,7 +347,7 @@
                         supplierPrices = {};
                         data.forEach(row => {
                             if (!supplierPrices[row.product_name]) supplierPrices[row.product_name] = {};
-                            supplierPrices[row.product_name][row.supplier_name] = parseFloat(row.price_per_kg);
+                            supplierPrices[row.product_name][row.supplier_name] = (row.price_per_kg !== null && row.price_per_kg !== undefined) ? parseFloat(row.price_per_kg) : -1;
                         });
                         renderList();
                         return;
@@ -358,9 +361,14 @@
         }
 
         async function savePrice(productName, supplierName, priceVal) {
-            let priceNum = 0;
-            if (priceVal !== '-' && priceVal !== '') {
-                priceNum = parseFloat(priceVal) || 0;
+            let priceNum = -1; // -1 означает прочерк / отсутствие
+            const cleanVal = priceVal.trim();
+
+            if (cleanVal !== '-' && cleanVal !== '' && cleanVal !== '—') {
+                const parsed = parseFloat(cleanVal.replace(',', '.'));
+                if (!isNaN(parsed) && parsed >= 0) {
+                    priceNum = parsed;
+                }
             }
 
             if (!supplierPrices[productName]) supplierPrices[productName] = {};
@@ -413,8 +421,8 @@
                     </td>`;
                 
                 suppliers.forEach(sup => {
-                    const rawVal = (supplierPrices[prod] && supplierPrices[prod][sup] !== undefined) ? supplierPrices[prod][sup] : '';
-                    const displayVal = (rawVal === 0 || rawVal === '') ? '' : rawVal;
+                    const rawVal = (supplierPrices[prod] && supplierPrices[prod][sup] !== undefined) ? supplierPrices[prod][sup] : -1;
+                    const displayVal = (rawVal > 0) ? rawVal : '';
 
                     cellsHtml += `
                         <td class="p-1.5 text-center">
