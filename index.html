@@ -187,7 +187,7 @@
             </div>
 
             <div class="flex justify-between items-center pt-2 border-t">
-                <span class="text-[11px] text-gray-400">* Автоматично съхранение в облака.</span>
+                <span class="text-[11px] text-gray-400">* Автоматично съхранение в облака и на устройството.</span>
                 <button onclick="closePricesModal()" class="px-4 py-1.5 text-xs bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Готово</button>
             </div>
         </div>
@@ -316,7 +316,6 @@
             renderList();
         }
 
-        // Принудительно сохраняет все значения, которые сейчас набраны в полях на экране
         async function saveCurrentVisiblePrices() {
             const inputs = document.querySelectorAll('.price-input-cell');
             const promises = [];
@@ -366,26 +365,25 @@
         }
 
         async function loadSupplierPrices() {
+            const local = localStorage.getItem('veg_supplier_prices');
+            if (local) {
+                supplierPrices = JSON.parse(local);
+            }
+
             if (supabaseClient) {
                 try {
                     const { data, error } = await supabaseClient.from('supplier_prices').select('*');
                     if (!error && data) {
-                        supplierPrices = {};
                         data.forEach(row => {
                             const pName = row.product_name.toLowerCase();
                             if (!supplierPrices[pName]) supplierPrices[pName] = {};
                             const val = parseFloat(row.price_per_kg);
                             supplierPrices[pName][row.supplier_name] = (!isNaN(val) && val > 0) ? val : -1;
                         });
-                        renderPricesTable();
-                        renderList();
-                        return;
                     }
                 } catch (e) {}
             }
 
-            const local = localStorage.getItem('veg_supplier_prices');
-            supplierPrices = local ? JSON.parse(local) : {};
             renderPricesTable();
             renderList();
         }
@@ -405,18 +403,23 @@
             if (!supplierPrices[cleanProd]) supplierPrices[cleanProd] = {};
             supplierPrices[cleanProd][supplierName] = priceNum;
 
+            // Железно сохраняем локально на устройстве
+            localStorage.setItem('veg_supplier_prices', JSON.stringify(supplierPrices));
+
+            // Пробуем отправить в Supabase
             if (supabaseClient) {
-                const recordId = `${cleanProd}_${supplierName}`;
-                await supabaseClient.from('supplier_prices').upsert({
-                    id: recordId,
-                    product_name: cleanProd,
-                    supplier_name: supplierName,
-                    price_per_kg: priceNum,
-                    updated_at: new Date().toISOString()
-                });
-            } else {
-                localStorage.setItem('veg_supplier_prices', JSON.stringify(supplierPrices));
+                try {
+                    const recordId = `${cleanProd}_${supplierName}`;
+                    await supabaseClient.from('supplier_prices').upsert({
+                        id: recordId,
+                        product_name: cleanProd,
+                        supplier_name: supplierName,
+                        price_per_kg: priceNum,
+                        updated_at: new Date().toISOString()
+                    });
+                } catch(e) {}
             }
+            
             if (triggerRender) {
                 renderList();
             }
