@@ -32,16 +32,21 @@
     <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
         
         <!-- Header -->
-        <div class="bg-emerald-700 p-5 text-white flex justify-between items-center">
+        <div class="bg-emerald-700 p-5 text-white flex justify-between items-center flex-wrap gap-2">
             <div>
                 <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
                     <i class="fa-solid fa-carrot"></i> Инвентар & Заявки
                 </h1>
                 <p class="text-xs text-emerald-100 mt-1">Автоматично сумиране & Облачна синхронизация</p>
             </div>
-            <button onclick="openConfigModal()" class="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5 backdrop-blur-sm">
-                <i class="fa-solid fa-cloud"></i> Облак настройки
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="openPricesModal()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm font-medium">
+                    <i class="fa-solid fa-tags"></i> Цени (Доставчици)
+                </button>
+                <button onclick="openConfigModal()" class="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5 backdrop-blur-sm">
+                    <i class="fa-solid fa-cloud"></i> Облак
+                </button>
+            </div>
         </div>
 
         <!-- Status Bar -->
@@ -112,7 +117,7 @@
             <div class="flex items-center justify-between text-xs pt-1">
                 <label class="flex items-center gap-2 cursor-pointer select-none text-gray-600 font-medium">
                     <input type="checkbox" id="hideOrderedToggle" onchange="renderList()" class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
-                    <span>Скрии поръчаните (покажи само ❌)</span>
+                    <span>Скрийте поръчаните (покажи само ❌)</span>
                 </label>
             </div>
         </div>
@@ -124,6 +129,54 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Modal Supplier Prices -->
+    <div id="pricesModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-amber-500"></i> База цени на доставчици (лв/кг)
+                </h3>
+                <button onclick="closePricesModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- Supplier Names Editor -->
+            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 space-y-2">
+                <span class="text-xs font-semibold text-amber-900 block">Имена на 5-те доставчика:</span>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <input type="text" id="sup1Name" value="Доставчик 1" onchange="updateSupplierNames()" class="px-2 py-1 text-xs border rounded bg-white">
+                    <input type="text" id="sup2Name" value="Доставчик 2" onchange="updateSupplierNames()" class="px-2 py-1 text-xs border rounded bg-white">
+                    <input type="text" id="sup3Name" value="Доставчик 3" onchange="updateSupplierNames()" class="px-2 py-1 text-xs border rounded bg-white">
+                    <input type="text" id="sup4Name" value="Доставчик 4" onchange="updateSupplierNames()" class="px-2 py-1 text-xs border rounded bg-white">
+                    <input type="text" id="sup5Name" value="Доставчик 5" onchange="updateSupplierNames()" class="px-2 py-1 text-xs border rounded bg-white">
+                </div>
+            </div>
+
+            <!-- Prices Table -->
+            <div class="overflow-y-auto flex-1 border border-gray-200 rounded-xl">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="bg-gray-100 text-gray-600 sticky top-0 border-b border-gray-200">
+                        <tr>
+                            <th class="p-2.5 font-semibold">Продукт</th>
+                            <th class="p-2.5 font-semibold text-center" id="thSup1">Доставчик 1</th>
+                            <th class="p-2.5 font-semibold text-center" id="thSup2">Доставчик 2</th>
+                            <th class="p-2.5 font-semibold text-center" id="thSup3">Доставчик 3</th>
+                            <th class="p-2.5 font-semibold text-center" id="thSup4">Доставчик 4</th>
+                            <th class="p-2.5 font-semibold text-center" id="thSup5">Доставчик 5</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pricesTableBody" class="divide-y divide-gray-100">
+                        <!-- Rendered rows -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 border-t">
+                <span class="text-[11px] text-gray-400">* Цените са в лева за 1 кг. Промените се запазват автоматично.</span>
+                <button onclick="closePricesModal()" class="px-4 py-1.5 text-xs bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Готово</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Config -->
@@ -166,15 +219,16 @@
     <script>
         let supabaseClient = null;
         let items = [];
+        let supplierPrices = {};
+        let suppliers = ["Доставчик 1", "Доставчик 2", "Доставчик 3", "Доставчик 4", "Доставчик 5"];
+
         let activeItemId = null;
         let activeMode = 'add';
         let selectedIndex = -1;
         let activeSuggestionIndex = -1;
 
-        // Память последней тары для продуктов
         let unitMemory = JSON.parse(localStorage.getItem('veg_unit_memory') || '{}');
 
-        // Пресет продуктов
         const presetProducts = [
             "домат", "краставица", "картоф", "лук", "чесън", "морков", "пипер", "чушка", "патладжан", 
             "тиквичка", "зеле", "карфиол", "броколи", "спанак", "салата", "магданоз", "копър", "гъби", 
@@ -183,11 +237,163 @@
 
         window.onload = function() {
             initSupabase();
+            loadSupplierNames();
             loadItems();
-            setInterval(loadItems, 3000);
+            loadSupplierPrices();
+            setInterval(() => {
+                loadItems();
+                loadSupplierPrices();
+            }, 3000);
             setupKeyboardNavigation();
             setupAutocomplete();
         };
+
+        function loadSupplierNames() {
+            const saved = localStorage.getItem('veg_supplier_names');
+            if (saved) {
+                suppliers = JSON.parse(saved);
+            }
+            if (suppliers.length < 5) {
+                while(suppliers.length < 5) {
+                    suppliers.push(`Доставчик ${suppliers.length + 1}`);
+                }
+            }
+            document.getElementById('sup1Name').value = suppliers[0] || "Доставчик 1";
+            document.getElementById('sup2Name').value = suppliers[1] || "Доставчик 2";
+            document.getElementById('sup3Name').value = suppliers[2] || "Доставчик 3";
+            document.getElementById('sup4Name').value = suppliers[3] || "Доставчик 4";
+            document.getElementById('sup5Name').value = suppliers[4] || "Доставчик 5";
+            updateSupplierTableHeader();
+        }
+
+        function updateSupplierNames() {
+            suppliers[0] = document.getElementById('sup1Name').value.trim() || "Доставчик 1";
+            suppliers[1] = document.getElementById('sup2Name').value.trim() || "Доставчик 2";
+            suppliers[2] = document.getElementById('sup3Name').value.trim() || "Доставчик 3";
+            suppliers[3] = document.getElementById('sup4Name').value.trim() || "Доставчик 4";
+            suppliers[4] = document.getElementById('sup5Name').value.trim() || "Доставчик 5";
+            localStorage.setItem('veg_supplier_names', JSON.stringify(suppliers));
+            updateSupplierTableHeader();
+            renderPricesTable();
+            renderList();
+        }
+
+        function updateSupplierTableHeader() {
+            document.getElementById('thSup1').innerText = suppliers[0];
+            document.getElementById('thSup2').innerText = suppliers[1];
+            document.getElementById('thSup3').innerText = suppliers[2];
+            document.getElementById('thSup4').innerText = suppliers[3];
+            document.getElementById('thSup5').innerText = suppliers[4];
+        }
+
+        function openPricesModal() {
+            renderPricesTable();
+            document.getElementById('pricesModal').classList.remove('hidden');
+        }
+
+        function closePricesModal() {
+            document.getElementById('pricesModal').classList.add('hidden');
+        }
+
+        async function loadSupplierPrices() {
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient.from('supplier_prices').select('*');
+                    if (!error && data) {
+                        supplierPrices = {};
+                        data.forEach(row => {
+                            if (!supplierPrices[row.product_name]) supplierPrices[row.product_name] = {};
+                            supplierPrices[row.product_name][row.supplier_name] = parseFloat(row.price_per_kg);
+                        });
+                        renderList();
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            const local = localStorage.getItem('veg_supplier_prices');
+            supplierPrices = local ? JSON.parse(local) : {};
+            renderList();
+        }
+
+        async function savePrice(productName, supplierName, priceVal) {
+            const priceNum = parseFloat(priceVal) || 0;
+            if (!supplierPrices[productName]) supplierPrices[productName] = {};
+            supplierPrices[productName][supplierName] = priceNum;
+
+            if (supabaseClient) {
+                const recordId = `${productName}_${supplierName}`;
+                await supabaseClient.from('supplier_prices').upsert({
+                    id: recordId,
+                    product_name: productName,
+                    supplier_name: supplierName,
+                    price_per_kg: priceNum,
+                    updated_at: new Date().toISOString()
+                });
+            } else {
+                localStorage.setItem('veg_supplier_prices', JSON.stringify(supplierPrices));
+            }
+            renderList();
+        }
+
+        function renderPricesTable() {
+            const tbody = document.getElementById('pricesTableBody');
+            tbody.innerHTML = '';
+
+            const allProducts = Array.from(new Set([
+                ...items.map(i => i.name.toLowerCase()),
+                ...presetProducts,
+                ...Object.keys(supplierPrices)
+            ])).sort();
+
+            allProducts.forEach(prod => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+
+                let cellsHtml = `<td class="p-2.5 font-medium text-gray-800 capitalize">${prod}</td>`;
+                
+                suppliers.forEach(sup => {
+                    const price = (supplierPrices[prod] && supplierPrices[prod][sup]) ? supplierPrices[prod][sup] : '';
+                    cellsHtml += `
+                        <td class="p-1.5 text-center">
+                            <input type="number" step="0.01" placeholder="0.00" value="${price}" 
+                                onchange="savePrice('${prod}', '${sup}', this.value)"
+                                class="w-16 md:w-20 px-1.5 py-1 text-center border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono text-xs">
+                        </td>
+                    `;
+                });
+
+                tr.innerHTML = cellsHtml;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getBestPriceInfo(productName) {
+            const cleanName = productName.toLowerCase();
+            if (!supplierPrices[cleanName]) return null;
+
+            let minPrice = Infinity;
+            let bestSuppliers = [];
+
+            suppliers.forEach(sup => {
+                const price = supplierPrices[cleanName][sup];
+                if (price && price > 0) {
+                    if (price < minPrice) {
+                        minPrice = price;
+                        bestSuppliers = [sup];
+                    } else if (price === minPrice) {
+                        bestSuppliers.push(sup);
+                    }
+                }
+            });
+
+            if (minPrice === Infinity) return null;
+
+            return {
+                price: minPrice.toFixed(2),
+                suppliers: bestSuppliers.join(', ')
+            };
+        }
 
         function setupAutocomplete() {
             const nameInput = document.getElementById('productName');
@@ -201,7 +407,6 @@
                     return;
                 }
 
-                // Если для введенного слова есть сохраненная тара — выбираем её
                 if (unitMemory[val]) {
                     unitInput.value = unitMemory[val];
                 }
@@ -241,12 +446,10 @@
 
             nameInput.value = name;
 
-            // Если продукт был в сохраненной памяти — ставим его тару
             const cleanName = name.trim().toLowerCase();
             if (unitMemory[cleanName]) {
                 unitInput.value = unitMemory[cleanName];
             } else {
-                // Если не было в памяти, но уже есть в активном списке — берем его тару
                 const found = items.find(i => i.name.toLowerCase() === cleanName);
                 if (found && found.unit) unitInput.value = found.unit;
             }
@@ -312,6 +515,7 @@
             document.addEventListener('keydown', function(e) {
                 const quickModalOpen = !document.getElementById('quickModal').classList.contains('hidden');
                 const configModalOpen = !document.getElementById('configModal').classList.contains('hidden');
+                const pricesModalOpen = !document.getElementById('pricesModal').classList.contains('hidden');
 
                 if (quickModalOpen && e.key === 'Enter') {
                     e.preventDefault();
@@ -324,7 +528,7 @@
                     return;
                 }
 
-                if (configModalOpen) return;
+                if (configModalOpen || pricesModalOpen) return;
 
                 const isInputFocused = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName);
 
@@ -414,6 +618,7 @@
             closeConfigModal();
             initSupabase();
             loadItems();
+            loadSupplierPrices();
         }
 
         async function loadItems() {
@@ -451,7 +656,6 @@
 
             if (!name || isNaN(qty)) return;
 
-            // Запоминаем тару для этого наименования
             unitMemory[name] = unit;
             localStorage.setItem('veg_unit_memory', JSON.stringify(unitMemory));
 
@@ -633,6 +837,13 @@
                 const itemType = item.type || 'warehouse';
                 const isOrdered = item.is_ordered || false;
 
+                const bestPriceInfo = getBestPriceInfo(item.name);
+                const bestPriceBadgeHtml = bestPriceInfo 
+                    ? `<div class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-medium inline-flex items-center gap-1 mt-0.5">
+                        <i class="fa-solid fa-tag text-[9px]"></i> <strong>${bestPriceInfo.suppliers}</strong>: ${bestPriceInfo.price} лв/кг
+                       </div>`
+                    : '';
+
                 const typeBadgeHtml = itemType === 'drive'
                     ? `<button onclick="event.stopPropagation(); toggleItemType('${item.id}')" title="Нажмите, чтобы сменить на Склад" class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition flex items-center justify-center font-bold text-sm shrink-0">
                         <i class="fa-solid fa-truck"></i>
@@ -656,7 +867,10 @@
                             <div class="font-semibold ${isOrdered ? 'text-gray-400 line-through' : 'text-gray-800'} capitalize text-sm truncate">
                                 ${item.name}
                             </div>
-                            <div class="text-[10px] text-gray-400">${timeStr} • ${itemType === 'drive' ? 'Ехать' : 'Склад'}</div>
+                            <div class="text-[10px] text-gray-400 flex items-center gap-1.5 flex-wrap">
+                                <span>${timeStr} • ${itemType === 'drive' ? 'Ехать' : 'Склад'}</span>
+                            </div>
+                            ${bestPriceBadgeHtml}
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
