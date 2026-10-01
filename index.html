@@ -140,7 +140,7 @@
                 </h3>
                 <div class="flex items-center gap-2">
                     <button onclick="loadSupplierPrices()" title="Презареди цените от базата" class="text-xs text-amber-600 hover:text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                        <i class="fa-solid fa-rotate"></i> Перезагрузить
+                        <i class="fa-solid fa-rotate"></i> Опресни
                     </button>
                     <button onclick="closePricesModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
@@ -160,7 +160,7 @@
 
             <!-- Add Custom Product to Price Catalog -->
             <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-gray-200">
-                <input type="text" id="newCatalogProductInput" placeholder="Добави нов продукт в ценовия списък (напр. домат)" class="flex-1 px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <input type="text" id="newCatalogProductInput" onkeydown="if(event.key==='Enter') addCatalogProduct()" placeholder="Добави нов продукт в ценовия списък (напр. домат)" class="flex-1 px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
                 <button onclick="addCatalogProduct()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 shrink-0">
                     <i class="fa-solid fa-plus"></i> Добави в цените
                 </button>
@@ -310,12 +310,29 @@
             document.getElementById('pricesModal').classList.remove('hidden');
         }
 
-        function closePricesModal() {
+        async function closePricesModal() {
+            await saveCurrentVisiblePrices();
             document.getElementById('pricesModal').classList.add('hidden');
             renderList();
         }
 
-        function addCatalogProduct() {
+        // Принудительно сохраняет все значения, которые сейчас набраны в полях на экране
+        async function saveCurrentVisiblePrices() {
+            const inputs = document.querySelectorAll('.price-input-cell');
+            const promises = [];
+            inputs.forEach(input => {
+                const prod = input.getAttribute('data-prod');
+                const sup = input.getAttribute('data-sup');
+                const val = input.value;
+                if (prod && sup) {
+                    promises.push(savePrice(prod, sup, val, false));
+                }
+            });
+            await Promise.all(promises);
+        }
+
+        async function addCatalogProduct() {
+            await saveCurrentVisiblePrices();
             const input = document.getElementById('newCatalogProductInput');
             const val = input.value.trim().toLowerCase();
             if (!val) return;
@@ -328,13 +345,15 @@
             renderPricesTable();
         }
 
-        function removeCatalogProduct(prodName) {
+        async function removeCatalogProduct(prodName) {
+            await saveCurrentVisiblePrices();
             customPriceCatalog = customPriceCatalog.filter(p => p !== prodName);
             localStorage.setItem('veg_price_catalog', JSON.stringify(customPriceCatalog));
             renderPricesTable();
         }
 
-        function moveCatalogProduct(index, direction) {
+        async function moveCatalogProduct(index, direction) {
+            await saveCurrentVisiblePrices();
             const targetIndex = index + direction;
             if (targetIndex < 0 || targetIndex >= customPriceCatalog.length) return;
 
@@ -371,7 +390,7 @@
             renderList();
         }
 
-        async function savePrice(productName, supplierName, priceVal) {
+        async function savePrice(productName, supplierName, priceVal, triggerRender = true) {
             const cleanProd = productName.toLowerCase().trim();
             let priceNum = -1; 
             const cleanVal = priceVal.trim();
@@ -398,7 +417,9 @@
             } else {
                 localStorage.setItem('veg_supplier_prices', JSON.stringify(supplierPrices));
             }
-            renderList();
+            if (triggerRender) {
+                renderList();
+            }
         }
 
         function renderPricesTable() {
@@ -440,8 +461,10 @@
                     cellsHtml += `
                         <td class="p-1.5 text-center">
                             <input type="text" placeholder="—" value="${displayVal}" 
+                                data-prod="${prod}" data-sup="${sup}"
                                 onchange="savePrice('${prod}', '${sup}', this.value)"
-                                class="w-16 md:w-20 px-1.5 py-1 text-center border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono text-xs">
+                                onkeydown="if(event.key==='Enter') savePrice('${prod}', '${sup}', this.value)"
+                                class="price-input-cell w-16 md:w-20 px-1.5 py-1 text-center border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono text-xs">
                         </td>
                     `;
                 });
