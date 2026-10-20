@@ -134,11 +134,14 @@
     <!-- Modal Supplier Prices -->
     <div id="pricesModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-4xl w-full p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center border-b pb-3">
+            <div class="flex justify-between items-center border-b pb-3 flex-wrap gap-2">
                 <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
                     <i class="fa-solid fa-tags text-amber-500"></i> База цени на доставчици (€/кг)
                 </h3>
                 <div class="flex items-center gap-2">
+                    <button onclick="clearAllPrices()" title="Очистить все цены к новой неделе" class="text-xs text-red-600 hover:text-red-800 font-medium bg-red-50 px-2.5 py-1 rounded border border-red-200 flex items-center gap-1">
+                        <i class="fa-solid fa-broom"></i> Сбросить цены (Новая неделя)
+                    </button>
                     <button onclick="loadSupplierPrices()" title="Презареди цените от базата" class="text-xs text-amber-600 hover:text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200">
                         <i class="fa-solid fa-rotate"></i> Опресни
                     </button>
@@ -236,6 +239,7 @@
         let supplierPrices = {};
         let suppliers = ["Катя", "Нина", "Човека-плод", "Руснака", "Косьо"];
         let customPriceCatalog = JSON.parse(localStorage.getItem('veg_price_catalog') || '[]');
+        let productUsageStats = JSON.parse(localStorage.getItem('veg_usage_stats') || '{}');
 
         let activeItemId = null;
         let activeMode = 'add';
@@ -247,7 +251,7 @@
         const presetProducts = [
             "домат", "краставица", "картоф", "лук", "чесън", "морков", "пипер", "чушка", "патладжан", 
             "тиквичка", "зеле", "карфиол", "броколи", "спанак", "салата", "магданоз", "копър", "гъби", 
-            "лимон", "портокал", "ябълка", "банан", "грозде", "ягода", "малина", "диня", "пъпеш"
+            "лимон", "портокал", "ябълка", "банан", "грозде", "ягода", "малина", "диня", "пъпеш", "целина", "целина глава"
         ];
 
         window.onload = function() {
@@ -264,6 +268,16 @@
         async function refreshAllData() {
             await loadItems();
             await loadSupplierPrices();
+        }
+
+        function recordProductUsage(name) {
+            const clean = name.toLowerCase().trim();
+            if (!productUsageStats[clean]) {
+                productUsageStats[clean] = { count: 0, lastUsed: 0 };
+            }
+            productUsageStats[clean].count += 1;
+            productUsageStats[clean].lastUsed = Date.now();
+            localStorage.setItem('veg_usage_stats', JSON.stringify(productUsageStats));
         }
 
         function loadSupplierNames() {
@@ -328,6 +342,23 @@
                 }
             });
             await Promise.all(promises);
+        }
+
+        async function clearAllPrices() {
+            const confirmClear = confirm("Сигурни ли сте, че искате да занулите всички цени за новата седмица?");
+            if (!confirmClear) return;
+
+            supplierPrices = {};
+            localStorage.setItem('veg_supplier_prices', JSON.stringify({}));
+
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.from('supplier_prices').delete().neq('id', '0');
+                } catch(e) {}
+            }
+
+            renderPricesTable();
+            renderList();
         }
 
         async function addCatalogProduct() {
@@ -526,7 +557,18 @@
                 }
 
                 const allNames = Array.from(new Set([...customPriceCatalog, ...items.map(i => i.name.toLowerCase()), ...presetProducts]));
-                const matches = allNames.filter(n => n.startsWith(val));
+                let matches = allNames.filter(n => n.startsWith(val));
+
+                // Умная сортировка: сначала часто используемые/последние добавленные
+                matches.sort((a, b) => {
+                    const statsA = productUsageStats[a] || { count: 0, lastUsed: 0 };
+                    const statsB = productUsageStats[b] || { count: 0, lastUsed: 0 };
+
+                    if (statsB.lastUsed !== statsA.lastUsed) {
+                        return statsB.lastUsed - statsA.lastUsed;
+                    }
+                    return statsB.count - statsA.count;
+                });
 
                 if (matches.length === 0) {
                     box.classList.add('hidden');
@@ -537,8 +579,8 @@
                 box.innerHTML = '';
                 matches.forEach((m, idx) => {
                     const div = document.createElement('div');
-                    div.className = 'suggestion-item px-3 py-2 text-sm capitalize cursor-pointer hover:bg-emerald-50 text-gray-700';
-                    div.innerText = m;
+                    div.className = 'suggestion-item px-3 py-2 text-sm capitalize cursor-pointer hover:bg-emerald-50 text-gray-700 flex justify-between items-center';
+                    div.innerHTML = `<span>${m}</span>`;
                     div.onclick = () => selectSuggestion(m);
                     box.appendChild(div);
                 });
@@ -559,6 +601,7 @@
             const box = document.getElementById('suggestionsBox');
 
             nameInput.value = name;
+            recordProductUsage(name);
 
             const cleanName = name.trim().toLowerCase();
             if (unitMemory[cleanName]) {
@@ -597,9 +640,9 @@
                     } else if (e.key === 'Enter') {
                         e.preventDefault();
                         if (activeSuggestionIndex >= 0 && activeSuggestionIndex < suggestions.length) {
-                            selectSuggestion(suggestions[activeSuggestionIndex].innerText);
+                            selectSuggestion(suggestions[activeSuggestionIndex].querySelector('span').innerText);
                         } else {
-                            selectSuggestion(suggestions[0].innerText);
+                            selectSuggestion(suggestions[0].querySelector('span').innerText);
                         }
                         return;
                     }
@@ -608,6 +651,7 @@
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     box.classList.add('hidden');
+                    recordProductUsage(nameInput.value);
                     qtyInput.focus();
                 }
             });
@@ -769,6 +813,7 @@
 
             if (!name || isNaN(qty)) return;
 
+            recordProductUsage(name);
             unitMemory[name] = unit;
             localStorage.setItem('veg_unit_memory', JSON.stringify(unitMemory));
 
