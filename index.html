@@ -389,17 +389,18 @@
                 line = line.trim();
                 if (!line) continue;
 
-                // Ищем шаблон: "Название [символы/тире/двоеточие] Цена"
-                const match = line.match(/^([a-zA-Zа-яА-Яна-яА-ЯбгБг\s]+?)[\s\:\–\-]+([\d\,]+)/);
+                // Улучшенный регулярный поиск: захватываем названия с пробелами и точные дробные цены (1.30, 1,50)
+                const match = line.match(/^([a-zA-Zа-яА-Яна-яА-ЯбгБг\s\(\)]+?)[\s\:\–\-]+([\d]+(?:[\.\,][\d]+)?)/);
                 if (match) {
                     const prodRaw = match[1].trim().toLowerCase();
                     const priceRaw = match[2].replace(',', '.');
 
-                    if (prodRaw && !isNaN(parseFloat(priceRaw))) {
+                    const parsedVal = parseFloat(priceRaw);
+                    if (prodRaw && !isNaN(parsedVal) && parsedVal > 0) {
                         if (!customPriceCatalog.includes(prodRaw)) {
                             customPriceCatalog.push(prodRaw);
                         }
-                        await savePrice(prodRaw, supName, priceRaw, false);
+                        await savePrice(prodRaw, supName, parsedVal.toString(), false);
                         updatedCount++;
                     }
                 }
@@ -504,12 +505,12 @@
         async function savePrice(productName, supplierName, priceVal, triggerRender = true) {
             const cleanProd = productName.toLowerCase().trim();
             let priceNum = -1; 
-            const cleanVal = priceVal.trim();
+            const cleanVal = priceVal.toString().trim();
 
             if (cleanVal !== '-' && cleanVal !== '' && cleanVal !== '—') {
                 const parsed = parseFloat(cleanVal.replace(',', '.'));
                 if (!isNaN(parsed) && parsed > 0) {
-                    priceNum = parsed;
+                    priceNum = parseFloat(parsed.toFixed(2));
                 }
             }
 
@@ -770,6 +771,7 @@
                 const quickModalOpen = !document.getElementById('quickModal').classList.contains('hidden');
                 const configModalOpen = !document.getElementById('configModal').classList.contains('hidden');
                 const pricesModalOpen = !document.getElementById('pricesModal').classList.contains('hidden');
+                const viberModalOpen = !document.getElementById('viberModal').classList.contains('hidden');
 
                 if (quickModalOpen && e.key === 'Enter') {
                     e.preventDefault();
@@ -782,7 +784,7 @@
                     return;
                 }
 
-                if (configModalOpen || pricesModalOpen) return;
+                if (configModalOpen || pricesModalOpen || viberModalOpen) return;
 
                 const isInputFocused = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName);
 
