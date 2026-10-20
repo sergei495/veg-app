@@ -138,7 +138,10 @@
                 <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
                     <i class="fa-solid fa-tags text-amber-500"></i> База цени на доставчици (€/кг)
                 </h3>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="openViberImportModal()" title="Импорт прайса из Viber" class="text-xs text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-2.5 py-1 rounded border border-blue-200 flex items-center gap-1">
+                        <i class="fa-brands fa-viber text-blue-500"></i> Вставить из Viber
+                    </button>
                     <button onclick="clearAllPrices()" title="Очистить все цены к новой неделе" class="text-xs text-red-600 hover:text-red-800 font-medium bg-red-50 px-2.5 py-1 rounded border border-red-200 flex items-center gap-1">
                         <i class="fa-solid fa-broom"></i> Сбросить цены (Новая неделя)
                     </button>
@@ -190,8 +193,35 @@
             </div>
 
             <div class="flex justify-between items-center pt-2 border-t">
-                <span class="text-[11px] text-gray-400">* Автоматично съхранение в облака и на устройството.</span>
+                <span class="text-[11px] text-gray-400">* Нажатие Enter переводит курсор вниз.</span>
                 <button onclick="closePricesModal()" class="px-4 py-1.5 text-xs bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Готово</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Viber Import -->
+    <div id="viberModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                    <i class="fa-brands fa-viber text-purple-600"></i> Быстрая вставка из Viber
+                </h3>
+                <button onclick="closeViberModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Выберите поставщика:</label>
+                <select id="viberSupplierSelect" class="w-full px-3 py-2 border rounded-lg text-sm bg-white mb-3">
+                    <!-- Populated dynamically -->
+                </select>
+
+                <label class="block text-xs font-medium text-gray-600 mb-1">Вставьте текст сообщения из Viber:</label>
+                <textarea id="viberText" rows="6" placeholder="Вставьте текст, например:&#10;Домат 1.20&#10;Краставици - 1.40&#10;Картофи 0.80" class="w-full px-3 py-2 border rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t">
+                <button onclick="closeViberModal()" class="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg">Отмена</button>
+                <button onclick="processViberImport()" class="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Распознать и записать
+                </button>
             </div>
         </div>
     </div>
@@ -330,6 +360,58 @@
             renderList();
         }
 
+        function openViberImportModal() {
+            const select = document.getElementById('viberSupplierSelect');
+            select.innerHTML = '';
+            suppliers.forEach((sup, idx) => {
+                const opt = document.createElement('option');
+                opt.value = sup;
+                opt.innerText = sup;
+                select.appendChild(opt);
+            });
+            document.getElementById('viberText').value = '';
+            document.getElementById('viberModal').classList.remove('hidden');
+        }
+
+        function closeViberModal() {
+            document.getElementById('viberModal').classList.add('hidden');
+        }
+
+        async function processViberImport() {
+            const supName = document.getElementById('viberSupplierSelect').value;
+            const text = document.getElementById('viberText').value;
+            if (!text.trim()) return;
+
+            const lines = text.split('\n');
+            let updatedCount = 0;
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+
+                // Ищем шаблон: "Название [символы/тире/двоеточие] Цена"
+                const match = line.match(/^([a-zA-Zа-яА-Яна-яА-ЯбгБг\s]+?)[\s\:\–\-]+([\d\,]+)/);
+                if (match) {
+                    const prodRaw = match[1].trim().toLowerCase();
+                    const priceRaw = match[2].replace(',', '.');
+
+                    if (prodRaw && !isNaN(parseFloat(priceRaw))) {
+                        if (!customPriceCatalog.includes(prodRaw)) {
+                            customPriceCatalog.push(prodRaw);
+                        }
+                        await savePrice(prodRaw, supName, priceRaw, false);
+                        updatedCount++;
+                    }
+                }
+            }
+
+            localStorage.setItem('veg_price_catalog', JSON.stringify(customPriceCatalog));
+            closeViberModal();
+            renderPricesTable();
+            renderList();
+            alert(`Успешно распознано и занесено ${updatedCount} цен для ${supName}!`);
+        }
+
         async function saveCurrentVisiblePrices() {
             const inputs = document.querySelectorAll('.price-input-cell');
             const promises = [];
@@ -454,6 +536,21 @@
             }
         }
 
+        function focusNextPriceCell(prod, supIdx) {
+            let catalogList = [...customPriceCatalog];
+            items.forEach(item => {
+                const name = item.name.toLowerCase();
+                if (!catalogList.includes(name)) catalogList.push(name);
+            });
+
+            const currentIdx = catalogList.indexOf(prod);
+            if (currentIdx !== -1 && currentIdx + 1 < catalogList.length) {
+                const nextProd = catalogList[currentIdx + 1];
+                const nextInput = document.querySelector(`.price-input-cell[data-prod="${nextProd}"][data-sup="${suppliers[supIdx]}"]`);
+                if (nextInput) nextInput.focus();
+            }
+        }
+
         function renderPricesTable() {
             const tbody = document.getElementById('pricesTableBody');
             if (!tbody) return;
@@ -486,7 +583,7 @@
                         </div>
                     </td>`;
                 
-                suppliers.forEach(sup => {
+                suppliers.forEach((sup, supIdx) => {
                     const rawVal = (supplierPrices[prod] && supplierPrices[prod][sup] !== undefined) ? supplierPrices[prod][sup] : -1;
                     const displayVal = (rawVal > 0) ? rawVal : '';
 
@@ -495,7 +592,7 @@
                             <input type="text" placeholder="—" value="${displayVal}" 
                                 data-prod="${prod}" data-sup="${sup}"
                                 onchange="savePrice('${prod}', '${sup}', this.value)"
-                                onkeydown="if(event.key==='Enter') savePrice('${prod}', '${sup}', this.value)"
+                                onkeydown="if(event.key==='Enter') { savePrice('${prod}', '${sup}', this.value); focusNextPriceCell('${prod}', ${supIdx}); }"
                                 class="price-input-cell w-16 md:w-20 px-1.5 py-1 text-center border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono text-xs">
                         </td>
                     `;
@@ -559,7 +656,6 @@
                 const allNames = Array.from(new Set([...customPriceCatalog, ...items.map(i => i.name.toLowerCase()), ...presetProducts]));
                 let matches = allNames.filter(n => n.startsWith(val));
 
-                // Умная сортировка: сначала часто используемые/последние добавленные
                 matches.sort((a, b) => {
                     const statsA = productUsageStats[a] || { count: 0, lastUsed: 0 };
                     const statsB = productUsageStats[b] || { count: 0, lastUsed: 0 };
