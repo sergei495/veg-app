@@ -60,7 +60,7 @@
         <!-- Input Form -->
         <div class="p-4 md:p-6 bg-slate-50 border-b border-gray-200">
             <h2 class="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wider">Добави или промени позиция</h2>
-            <form id="addForm" onsubmit="handleFormSubmit(event)" class="space-y-3">
+            <form id="addForm" onsubmit="handleFormSubmit(event)" class="space-y-3" autocomplete="off">
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
                     <div class="md:col-span-2">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Тип</label>
@@ -71,7 +71,9 @@
                     </div>
                     <div class="md:col-span-5 relative">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Продукт (напр. Гъби)</label>
-                        <input type="text" id="productName" required autocomplete="off" placeholder="Продукт / Стока" 
+                        <input type="text" id="productName" name="veg_product_search_no_autofill" required 
+                            autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+                            placeholder="Продукт / Стока" 
                             class="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                         <!-- Suggestions Dropdown -->
                         <div id="suggestionsBox" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto"></div>
@@ -389,7 +391,6 @@
                 line = line.trim();
                 if (!line) continue;
 
-                // Улучшенный регулярный поиск: захватываем названия с пробелами и точные дробные цены (1.30, 1,50)
                 const match = line.match(/^([a-zA-Zа-яА-Яна-яА-ЯбгБг\s\(\)]+?)[\s\:\–\-]+([\d]+(?:[\.\,][\d]+)?)/);
                 if (match) {
                     const prodRaw = match[1].trim().toLowerCase();
